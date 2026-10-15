@@ -1,7 +1,7 @@
 ---
 description: Choose the Timatic customer that time in this folder is booked on. Use when the user wants to set, change or check which Timatic customer (klant) this project or folder belongs to.
 argument-hint: "[customer name]"
-allowed-tools: Bash(node "${CLAUDE_PLUGIN_ROOT}/scripts/timatic.mjs" customers*), Bash(node "${CLAUDE_PLUGIN_ROOT}/scripts/timatic.mjs" set-customer*)
+allowed-tools: Bash(node "${CLAUDE_PLUGIN_ROOT}/scripts/timatic.mjs" customers*), Bash(node "${CLAUDE_PLUGIN_ROOT}/scripts/timatic.mjs" set-customer*), Bash(node "${CLAUDE_PLUGIN_ROOT}/scripts/timatic.mjs" budgets), Bash(node "${CLAUDE_PLUGIN_ROOT}/scripts/timatic.mjs" set-budget*)
 ---
 
 Link the folder Claude Code runs in to a Timatic customer. This also turns tracking on for the folder. The choice is saved per folder in the plugin's own data, not in the repository.
@@ -20,4 +20,16 @@ Link the folder Claude Code runs in to a Timatic customer. This also turns track
    node "${CLAUDE_PLUGIN_ROOT}/scripts/timatic.mjs" set-customer <id>
    ```
 
-4. Report the outcome in one line.
+4. Ask about a budget, which is optional:
+
+   ```
+   node "${CLAUDE_PLUGIN_ROOT}/scripts/timatic.mjs" budgets
+   ```
+
+   If it lists budgets (`<id><TAB><title>`), ask the user whether all work in this folder is for one of them, and always offer "No specific budget" as an option. On a budget, run:
+
+   ```
+   node "${CLAUDE_PLUGIN_ROOT}/scripts/timatic.mjs" set-budget <id>
+   ```
+
+5. Report the outcome in one line.

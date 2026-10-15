@@ -21,8 +21,9 @@ needs `node` 18 or later on your `PATH`.
 1. `/timatic:login` opens your browser. You log in to Timatic with your own account and approve
    "Claude Code plugin". The plugin gets a token of its own, valid for 90 days.
 2. In every folder you have not decided on yet, Claude asks at the start of the session whether
-   Timatic should track your time there and, if so, for which customer. Your answer is remembered
-   for that folder and every folder below it.
+   Timatic should track your time there. If so, it asks for which customer and, optionally, whether
+   all work there is for one budget of that customer. Your answers are remembered for that folder
+   and every folder below it.
 
 ## Commands
 
@@ -31,9 +32,10 @@ needs `node` 18 or later on your `PATH`.
 | `/timatic:login [--url <url>]` | Log in, or log in again after the token expired |
 | `/timatic:logout` | Revoke this installation's token |
 | `/timatic:customer [search]` | Choose the customer for the current folder (turns tracking on) |
+| `/timatic:budget [search\|none]` | Book all work in the current folder on one budget of its customer, or on none |
 | `/timatic:track on\|off` | Turn tracking on or off for the current folder |
 | `/timatic:ticket <KEY\|clear>` | Set the ticket for the rest of this session |
-| `/timatic:status` | Show login, folder, ticket from the git branch and the outgoing queue |
+| `/timatic:status` | Show login, folder, customer, budget, ticket from the git branch and the outgoing queue |
 
 ## What is sent
 
@@ -48,6 +50,7 @@ Each event carries:
 - `sourceId`: `claude_code`
 - `userId`: the user you logged in as
 - `customerId`: the customer chosen for the folder
+- `budgetId`: the budget chosen for the folder, if any
 - `ticketNumber`: the ticket, when one is known (see below)
 - `title`: `Claude Code: <folder name>`
 - `description`: the session name, as set with `/rename`
@@ -77,8 +80,8 @@ set `ticketPattern` (a JavaScript regular expression) on the folder in `projects
 In `~/.config/timatic-claude/` (or `$XDG_CONFIG_HOME/timatic-claude`, or `$TIMATIC_HOME`):
 
 - `credentials.json`: your token, readable by you only
-- `projects.json`: per folder, whether it is tracked and on which customer. You can also add
-  `budgetId`, `isInternal` and `ticketPattern` to a folder here.
+- `projects.json`: per folder, whether it is tracked and on which customer and budget. You can
+  also add `isInternal` and `ticketPattern` to a folder here.
 - `sessions/`: per session, its title, ticket and the start of the current turn. Pruned after 14 days.
 - `queue.json`: events waiting for Timatic to be reachable
 

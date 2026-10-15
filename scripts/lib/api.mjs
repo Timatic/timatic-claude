@@ -49,25 +49,60 @@ export async function request(baseUrl, path, { method = 'GET', token, body } = {
 }
 
 /**
- * Every customer the user may book on, following json:api pagination.
- *
- * @returns {Promise<Array<{id: number, name: string}>>}
+ * Every resource behind a json:api index, following its pagination.
  */
-export async function fetchCustomers(baseUrl, token) {
-  const customers = [];
+async function fetchAll(baseUrl, token, path) {
+  const resources = [];
+  const separator = path.includes('?') ? '&' : '?';
 
   for (let page = 1; page <= 50; page++) {
-    const json = await request(baseUrl, `/customers?page[size]=500&page[number]=${page}`, { token });
+    const json = await request(baseUrl, `${path}${separator}page[size]=500&page[number]=${page}`, { token });
     const data = json?.data ?? [];
 
-    customers.push(...data.map((customer) => ({ id: Number(customer.id), name: customer.attributes?.name ?? '' })));
+    resources.push(...data);
 
     if (data.length === 0 || !json?.links?.next) {
       break;
     }
   }
 
-  return customers.sort((a, b) => a.name.localeCompare(b.name));
+  return resources;
+}
+
+/**
+ * @returns {Promise<Array<{id: number, name: string}>>}
+ */
+export async function fetchCustomers(baseUrl, token) {
+  return (await fetchAll(baseUrl, token, '/customers'))
+    .map((customer) => ({ id: Number(customer.id), name: customer.attributes?.name ?? '' }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+
+function toBudget(budget) {
+  return {
+    id: Number(budget.id),
+    title: budget.attributes?.title ?? '',
+    customerId: Number(budget.attributes?.customerId),
+  };
+}
+
+/**
+ * The budgets of one customer that work can still be booked on.
+ *
+ * @returns {Promise<Array<{id: number, title: string, customerId: number}>>}
+ */
+export async function fetchBudgets(baseUrl, token, customerId) {
+  const path = `/budgets?filter[customerId]=${encodeURIComponent(customerId)}&filter[isArchived]=false`;
+
+  return (await fetchAll(baseUrl, token, path))
+    .map(toBudget)
+    .sort((a, b) => a.title.localeCompare(b.title));
+}
+
+export async function fetchBudget(baseUrl, token, budgetId) {
+  const json = await request(baseUrl, `/budgets/${encodeURIComponent(budgetId)}`, { token });
+
+  return toBudget(json.data);
 }
 
 export async function fetchCustomer(baseUrl, token, customerId) {

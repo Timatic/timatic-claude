@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { basename } from 'node:path';
-import { fetchCustomer, fetchCustomers } from './lib/api.mjs';
+import { fetchBudget, fetchBudgets, fetchCustomer, fetchCustomers } from './lib/api.mjs';
 import {
   findProject, forgetCredentials, isExpired, loadCredentials, resolveBaseUrl, saveCredentials, saveProject, workingDir,
 } from './lib/config.mjs';
@@ -156,7 +156,10 @@ export function sessionStartNotice(input, command = 'node "${CLAUDE_PLUGIN_ROOT}
       '"Should Timatic track your time in this folder?" with the options "Yes" and "No".',
       `On "No", run \`${command} track off\` and carry on with their request.`,
       `On "Yes", run \`${command} customers\` (lines of id<TAB>name), ask which customer this folder is for,`,
-      `run \`${command} set-customer <id>\`, then carry on with their request.`,
+      `run \`${command} set-customer <id>\`.`,
+      `Then run \`${command} budgets\` and, if it lists any, ask whether all work in this folder is for one specific budget;`,
+      'this is optional, so always offer "No specific budget" as an option.',
+      `On a budget, run \`${command} set-budget <id>\`. Then carry on with their request.`,
     );
   } else if (!Number.isInteger(config.customerId)) {
     notices.push(`No Timatic customer is set for ${directory}, so time arrives without one. Suggest running /timatic:customer.`);
@@ -252,7 +255,7 @@ const commands = {
       : !config.tracked
         ? `${directory} is not tracked.`
         : Number.isInteger(config.customerId)
-          ? `${directory} is tracked on ${config.customerName ?? '?'} (#${config.customerId}).`
+          ? `${directory} is tracked on ${config.customerName ?? '?'} (#${config.customerId})${Number.isInteger(config.budgetId) ? `, budget ${config.budgetTitle ?? '?'} (#${config.budgetId})` : ', no specific budget'}.`
           : `${directory} is tracked, without a customer.`);
     console.log(`Ticket from the git branch: ${branchTicket ?? 'none'}.`);
     console.log(`Events waiting to be sent: ${queuedCount()}.`);
@@ -286,8 +289,67 @@ const commands = {
     const customer = await fetchCustomer(credentials.baseUrl, credentials.token, customerId);
     const directory = workingDir();
 
-    saveProject(directory, { tracked: true, customerId: customer.id, customerName: customer.name });
+    const previous = findProject(directory).config;
+    // A budget belongs to one customer, so it does not survive a change of customer.
+    const budget = previous?.customerId === customer.id
+      ? { budgetId: previous.budgetId ?? null, budgetTitle: previous.budgetTitle ?? null }
+      : { budgetId: null, budgetTitle: null };
+
+    saveProject(directory, { tracked: true, customerId: customer.id, customerName: customer.name, ...budget });
     console.log(`Timatic now tracks ${directory} on ${customer.name} (#${customer.id}).`);
+  },
+
+  async budgets() {
+    const credentials = requireCredentials();
+    const { config } = findProject();
+
+    if (!Number.isInteger(config?.customerId)) {
+      throw new Error('Choose a customer for this folder first, with /timatic:customer.');
+    }
+
+    const budgets = await fetchBudgets(credentials.baseUrl, credentials.token, config.customerId);
+
+    if (budgets.length === 0) {
+      console.log(`${config.customerName ?? 'This customer'} has no open budgets.`);
+
+      return;
+    }
+
+    for (const budget of budgets) {
+      console.log(`${budget.id}\t${budget.title}`);
+    }
+  },
+
+  async 'set-budget'(args) {
+    const credentials = requireCredentials();
+    const directory = workingDir();
+    const { config } = findProject(directory);
+
+    if (!Number.isInteger(config?.customerId)) {
+      throw new Error('Choose a customer for this folder first, with /timatic:customer.');
+    }
+
+    if (args[0] === 'none') {
+      saveProject(directory, { ...config, budgetId: null, budgetTitle: null });
+      console.log(`Work in ${directory} is no longer booked on a specific budget.`);
+
+      return;
+    }
+
+    const budgetId = Number(args[0]);
+
+    if (!Number.isInteger(budgetId) || budgetId <= 0) {
+      throw new Error('Usage: set-budget <budget id|none>');
+    }
+
+    const budget = await fetchBudget(credentials.baseUrl, credentials.token, budgetId);
+
+    if (budget.customerId !== config.customerId) {
+      throw new Error(`Budget #${budget.id} does not belong to ${config.customerName ?? `customer #${config.customerId}`}.`);
+    }
+
+    saveProject(directory, { ...config, budgetId: budget.id, budgetTitle: budget.title });
+    console.log(`Work in ${directory} is now booked on budget ${budget.title} (#${budget.id}).`);
   },
 
   async track(args) {
