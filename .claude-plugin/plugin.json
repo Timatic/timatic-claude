@@ -1,0 +1,21 @@
+{
+  "name": "timatic",
+  "displayName": "Timatic",
+  "version": "0.1.0",
+  "description": "Logs your Claude Code prompts, answers and responses as events in Timatic, so your time is suggested per customer and ticket.",
+  "author": {
+    "name": "Tomas van Rijsse",
+    "email": "tomas@pionect.nl"
+  },
+  "repository": "https://github.com/tomasvanrijsse/timatic-claude",
+  "license": "MIT",
+  "keywords": ["timatic", "time-tracking", "hooks"],
+  "userConfig": {
+    "timatic_url": {
+      "type": "string",
+      "title": "Timatic url",
+      "description": "Base url of your Timatic backend, for example https://api.timatic.example. Used for login and for sending events.",
+      "required": false
+    }
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "name": "timatic",
+  "description": "Timatic plugins for Claude Code.",
+  "owner": {
+    "name": "Tomas van Rijsse"
+  },
+  "plugins": [
+    {
+      "name": "timatic",
+      "source": "./",
+      "description": "Logs your Claude Code prompts, answers and responses as events in Timatic."
+    }
+  ]
+}
