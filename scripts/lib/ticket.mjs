@@ -60,7 +60,7 @@ export function ticketFromBranch(cwd, pattern) {
  *
  * @returns {{ticket: ?string, ticketSource: ?string}}
  */
-export function resolveTicket(session, { prompt, assistantMessage, branchTicket, pattern }) {
+export function resolveTicket(session, { prompt, branchTicket, pattern }) {
   if (session.ticketSource === 'explicit') {
     return { ticket: session.ticket, ticketSource: 'explicit' };
   }
@@ -77,12 +77,6 @@ export function resolveTicket(session, { prompt, assistantMessage, branchTicket,
 
   if (branchTicket) {
     return { ticket: branchTicket, ticketSource: 'branch' };
-  }
-
-  const fromResponse = findTicket(assistantMessage, pattern);
-
-  if (fromResponse) {
-    return { ticket: fromResponse, ticketSource: 'response' };
   }
 
   return { ticket: session.ticket ?? null, ticketSource: session.ticketSource ?? null };

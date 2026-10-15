@@ -7,6 +7,7 @@ import {
 import { buildEvent, EVENT_TYPES, queuedCount, sendEvents } from './lib/events.mjs';
 import { login, logout } from './lib/oauth.mjs';
 import { loadSession, pruneSessions, saveSession } from './lib/session.mjs';
+import { recentPrompts, rememberPrompt, summarize, SUMMARIZING_ENV, summaryKey } from './lib/summary.mjs';
 import { resolveTicket, ticketFromBranch } from './lib/ticket.mjs';
 
 async function readStdin() {
@@ -61,7 +62,6 @@ export function handleHook(name, input, { now = new Date(), branchTicket } = {})
 
   const { ticket, ticketSource } = resolveTicket(session, {
     prompt: name === 'prompt-submitted' ? input.prompt : null,
-    assistantMessage: name === 'response-completed' ? input.last_assistant_message : null,
     branchTicket: branchTicket === undefined ? ticketFromBranch(input.cwd || directory, project.ticketPattern) : branchTicket,
     pattern: project.ticketPattern,
   });
@@ -78,7 +78,7 @@ export function handleHook(name, input, { now = new Date(), branchTicket } = {})
     case 'prompt-submitted':
       // No start: Timatic estimates the time spent writing the prompt itself.
       eventTypeId = EVENT_TYPES.promptSubmitted;
-      session.turnStartedAt = now.toISOString();
+      session.recentPrompts = rememberPrompt(session.recentPrompts, input.prompt, now);
       break;
     case 'question-asked':
       session.questionsAskedAt = { ...session.questionsAskedAt, [input.tool_use_id]: now.toISOString() };
@@ -87,12 +87,6 @@ export function handleHook(name, input, { now = new Date(), branchTicket } = {})
       eventTypeId = EVENT_TYPES.questionAnswered;
       startedAt = session.questionsAskedAt?.[input.tool_use_id] ?? null;
       delete session.questionsAskedAt?.[input.tool_use_id];
-      break;
-    case 'response-completed':
-      // The whole turn, from the prompt to the end of the answer.
-      eventTypeId = EVENT_TYPES.responseCompleted;
-      startedAt = session.turnStartedAt ?? null;
-      delete session.turnStartedAt;
       break;
     default:
       throw new Error(`Unknown hook ${name}`);
@@ -125,6 +119,7 @@ export function handleHook(name, input, { now = new Date(), branchTicket } = {})
   }
 
   // The title may only have become known after an event was held, so it is filled in on sending.
+  // Without one, describe() fills in a summary of the recent prompts just before sending.
   return events.map((event) => ({
     ...event,
     startedAt: event.startedAt ? new Date(event.startedAt) : null,
@@ -174,7 +169,46 @@ export function sessionStartNotice(input, command = 'node "${CLAUDE_PLUGIN_ROOT}
   return notices.length ? `Timatic plugin: ${notices.join(' ')}` : '';
 }
 
+/**
+ * The session's own name when the user gave it one, and otherwise what the prompts of the last
+ * quarter of an hour were about. A summary is remembered, so the next event with the same prompts
+ * does not ask for it again.
+ */
+async function describe(sessionId, now = new Date()) {
+  const session = loadSession(sessionId);
+
+  if (session.title) {
+    return session.title;
+  }
+
+  const prompts = recentPrompts(session.recentPrompts, now);
+
+  if (prompts.length === 0) {
+    return session.summary ?? null;
+  }
+
+  const key = summaryKey(prompts);
+
+  if (session.summaryKey === key) {
+    return session.summary;
+  }
+
+  const summary = await summarize(prompts);
+
+  if (summary) {
+    // Read again: another hook of this session may have written in the meantime.
+    saveSession(sessionId, { ...loadSession(sessionId), summary, summaryKey: key });
+  }
+
+  return summary ?? session.summary ?? null;
+}
+
 async function runHook(name) {
+  // The headless Claude Code that writes a summary runs this plugin's hooks too.
+  if (process.env[SUMMARIZING_ENV]) {
+    return;
+  }
+
   const input = await readStdin();
 
   // A hook must never break the session it runs in, so every failure ends here, silently.
@@ -198,7 +232,13 @@ async function runHook(name) {
       return;
     }
 
-    await sendEvents(credentials, events.map((event) => buildEvent({ ...event, userId: credentials.user.id })));
+    const description = await describe(input.session_id);
+
+    await sendEvents(credentials, events.map((event) => buildEvent({
+      ...event,
+      description: event.description ?? description,
+      userId: credentials.user.id,
+    })));
   } catch (error) {
     if (process.env.TIMATIC_DEBUG) {
       process.stderr.write(`timatic: ${error.stack ?? error.message}\n`);

@@ -7,7 +7,7 @@ import { beforeEach, test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { saveCredentials, saveProject } from '../scripts/lib/config.mjs';
 import { handleHook, sessionStartNotice } from '../scripts/timatic.mjs';
-import { fakeTimatic, useTemporaryHome } from './helpers.mjs';
+import { fakeTimatic, useTemporaryHome } from '../test-support/helpers.mjs';
 
 const script = fileURLToPath(new URL('../scripts/timatic.mjs', import.meta.url));
 
@@ -44,21 +44,16 @@ test('a prompt becomes an event with the session title as description', () => {
   assert.equal(event.startedAt, null);
 });
 
-test('a response spans the whole turn and keeps the ticket of the prompt', () => {
-  handleHook('prompt-submitted', { session_id: 's2', cwd: project, prompt: 'Build ABC-12' }, {
-    now: new Date('2026-10-15T10:00:00Z'),
-    branchTicket: 'BR-1',
-  });
+test('a later prompt keeps the ticket of an earlier one', () => {
+  handleHook('prompt-submitted', { session_id: 's2', cwd: project, prompt: 'Build ABC-12' }, { branchTicket: 'BR-1' });
 
-  const [event] = handleHook('response-completed', { session_id: 's2', cwd: project, last_assistant_message: 'Done' }, {
-    now: new Date('2026-10-15T10:07:00Z'),
-    branchTicket: 'BR-1',
-  });
+  const [event] = handleHook('prompt-submitted', { session_id: 's2', cwd: project, prompt: 'and add tests' }, { branchTicket: 'BR-1' });
 
-  assert.equal(event.eventTypeId, 'claude_response_completed');
   assert.equal(event.ticket, 'ABC-12');
-  assert.equal(event.startedAt.toISOString(), '2026-10-15T10:00:00.000Z');
-  assert.equal(event.endedAt.toISOString(), '2026-10-15T10:07:00.000Z');
+});
+
+test('Claude finishing a response is not a user action and sends nothing', () => {
+  assert.throws(() => handleHook('response-completed', { session_id: 's2', cwd: project }), /Unknown hook/);
 });
 
 test('an answered question spans the time the user took to answer', () => {
@@ -157,14 +152,14 @@ test('events from before the decision are sent once the user says yes', () => {
 
   saveProject(undecided, { tracked: true, customerId: 8 });
 
-  const events = handleHook('response-completed', { session_id: 's9', cwd: undecided }, { branchTicket: null });
+  const events = handleHook('prompt-submitted', { session_id: 's9', cwd: undecided, prompt: 'go on' }, { branchTicket: null });
 
-  assert.deepEqual(events.map((event) => event.eventTypeId), ['claude_prompt_submitted', 'claude_response_completed']);
+  assert.deepEqual(events.map((event) => event.eventTypeId), ['claude_prompt_submitted', 'claude_prompt_submitted']);
   assert.equal(events[0].project.customerId, 8);
 });
 
 test('a hook never fails, even on garbage input', () => {
-  const result = spawnSync('node', [script, 'hook', 'response-completed'], { input: 'not json', encoding: 'utf8', env: process.env });
+  const result = spawnSync('node', [script, 'hook', 'prompt-submitted'], { input: 'not json', encoding: 'utf8', env: process.env });
 
   assert.equal(result.status, 0);
 });

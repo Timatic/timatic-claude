@@ -1,15 +1,41 @@
 # Timatic for Claude Code
 
 A Claude Code plugin that logs your work in [Timatic](https://github.com/timatic/timatic-backend).
-Every prompt you send, every question of Claude's you answer and every response Claude completes
-becomes an event on Timatic's `/events` api. Timatic turns those events into activities and entry
-suggestions per customer and ticket.
+Every prompt you send and every question of Claude's you answer becomes an event on Timatic's
+`/events` api. Timatic turns those events into activities and entry suggestions per customer and
+ticket.
 
 ## Install
+
+This repository is its own plugin marketplace (`.claude-plugin/marketplace.json`), so Claude Code
+installs it straight from GitHub. Nothing has to be uploaded anywhere. In Claude Code:
 
 ```
 /plugin marketplace add tomasvanrijsse/timatic-claude
 /plugin install timatic@timatic
+```
+
+Or from a terminal:
+
+```
+claude plugin marketplace add tomasvanrijsse/timatic-claude
+claude plugin install timatic@timatic
+```
+
+Claude Code reads the repository's default branch, and needs access to it: for a private
+repository, your own git credentials must be able to clone it. Run `/plugin marketplace update
+timatic` to pick up a new version.
+
+To roll it out to a whole team, add the marketplace and plugin to a project's
+`.claude/settings.json`; Claude Code then offers to install it to everyone who trusts that folder:
+
+```json
+{
+  "extraKnownMarketplaces": {
+    "timatic": { "source": { "source": "github", "repo": "tomasvanrijsse/timatic-claude" } }
+  },
+  "enabledPlugins": { "timatic@timatic": true }
+}
 ```
 
 Claude Code asks for your Timatic url when you enable the plugin, for example
@@ -43,7 +69,6 @@ needs `node` 18 or later on your `PATH`.
 |---|---|---|---|
 | You send a prompt | `UserPromptSubmit` | `claude_prompt_submitted` | Ends when you send it; Timatic estimates the time spent writing |
 | You answer a question from Claude | `PostToolUse` on `AskUserQuestion` | `claude_question_answered` | From the question to your answer |
-| Claude finishes responding | `Stop` | `claude_response_completed` | From your prompt to the end of the response |
 
 Each event carries:
 
@@ -53,10 +78,14 @@ Each event carries:
 - `budgetId`: the budget chosen for the folder, if any
 - `ticketNumber`: the ticket, when one is known (see below)
 - `title`: `Claude Code: <folder name>`
-- `description`: the session name, as set with `/rename`
+- `description`: the session name, as set with `/rename`, or else a summary of your prompts of the
+  last 15 minutes
 
-Your prompt text and Claude's responses are **not** sent. They are only searched locally for a
-ticket key.
+Your prompt text and Claude's responses are **not** sent to Timatic. Prompts are searched locally
+for a ticket key. When the session has no name, the plugin asks Claude Code itself
+(`claude -p --model haiku`, without tools) to summarise the prompts of the last quarter of an hour
+in at most ten words, and sends only that summary. This runs in the background and only for folders
+you track. Set `TIMATIC_CLAUDE_BIN` if `claude` is not on the `PATH` of your hooks.
 
 Nothing is sent from a folder you declined. Before you decide on a folder, events are held for the
 current session and sent once you say yes. When Timatic cannot be reached they are queued and sent
@@ -70,7 +99,6 @@ in this order wins:
 1. A ticket set with `/timatic:ticket`
 2. The last key mentioned in one of your prompts in this session
 3. The git branch of the folder Claude Code runs in, for example `feature/abc-123-login-form`
-4. A key in Claude's response, when nothing else was found
 
 Common look-alikes such as `UTF-8`, `SHA-256` and `ISO-8601` are ignored. For another key format,
 set `ticketPattern` (a JavaScript regular expression) on the folder in `projects.json`, see below.
@@ -82,7 +110,8 @@ In `~/.config/timatic-claude/` (or `$XDG_CONFIG_HOME/timatic-claude`, or `$TIMAT
 - `credentials.json`: your token, readable by you only
 - `projects.json`: per folder, whether it is tracked and on which customer and budget. You can
   also add `isInternal` and `ticketPattern` to a folder here.
-- `sessions/`: per session, its title, ticket and the start of the current turn. Pruned after 14 days.
+- `sessions/`: per session, its title, ticket, the prompts of the last 15 minutes and their
+  summary. Pruned after 14 days.
 - `queue.json`: events waiting for Timatic to be reachable
 
 Set `TIMATIC_DEBUG=1` to see hook errors on stderr.

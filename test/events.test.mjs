@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { beforeEach, test } from 'node:test';
 import { buildEvent, queuedCount, sendEvents } from '../scripts/lib/events.mjs';
-import { fakeTimatic, useTemporaryHome } from './helpers.mjs';
+import { fakeTimatic, useTemporaryHome } from '../test-support/helpers.mjs';
 
 beforeEach(() => useTemporaryHome());
 

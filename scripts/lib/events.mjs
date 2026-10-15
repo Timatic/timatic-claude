@@ -7,11 +7,10 @@ export const SOURCE_ID = 'claude_code';
 export const EVENT_TYPES = {
   promptSubmitted: 'claude_prompt_submitted',
   questionAnswered: 'claude_question_answered',
-  responseCompleted: 'claude_response_completed',
 };
 
 /**
- * Timatic refuses events longer than this, and a turn that ran this long was not watched anyway.
+ * Timatic refuses events longer than this, and a question left open this long was not watched anyway.
  */
 const MAX_DURATION_MS = 24 * 60 * 60 * 1000;
 

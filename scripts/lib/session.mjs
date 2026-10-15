@@ -13,10 +13,10 @@ function sessionPath(sessionId) {
 }
 
 /**
- * What one Claude Code session has told us so far: its title, the ticket it is about and when the
- * current turn started. Only some hook payloads carry the title, so it has to be remembered.
+ * What one Claude Code session has told us so far: its title, the ticket it is about, its recent
+ * prompts and their summary. Only some hook payloads carry the title, so it has to be remembered.
  *
- * @returns {{title?: string, ticket?: string, ticketSource?: string, turnStartedAt?: string, questionsAskedAt?: Record<string, string>}}
+ * @returns {{title?: string, ticket?: string, ticketSource?: string, recentPrompts?: Array<{at: string, text: string}>, summary?: string, summaryKey?: string, questionsAskedAt?: Record<string, string>, heldEvents?: Array<object>}}
  */
 export function loadSession(sessionId) {
   return sessionId ? readJson(sessionPath(sessionId), {}) ?? {} : {};

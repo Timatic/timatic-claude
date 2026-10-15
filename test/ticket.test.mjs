@@ -45,9 +45,9 @@ test('a ticket from a prompt beats the branch and sticks for later turns', () =>
   assert.deepEqual(resolveTicket(first, { prompt: 'and the tests', branchTicket: 'BR-3' }), first);
 });
 
-test('falls back to the branch, and then to the response', () => {
+test('falls back to the branch', () => {
   assert.deepEqual(resolveTicket({}, { prompt: 'hello', branchTicket: 'BR-3' }), { ticket: 'BR-3', ticketSource: 'branch' });
-  assert.deepEqual(resolveTicket({}, { assistantMessage: 'Done with ABC-9.' }), { ticket: 'ABC-9', ticketSource: 'response' });
+  assert.deepEqual(resolveTicket({}, { prompt: 'hello', branchTicket: null }), { ticket: null, ticketSource: null });
 });
 
 test('follows a branch switch', () => {

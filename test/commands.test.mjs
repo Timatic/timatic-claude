@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import { beforeEach, test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { findProject, saveCredentials, saveProject } from '../scripts/lib/config.mjs';
-import { fakeTimatic, useTemporaryHome } from './helpers.mjs';
+import { fakeTimatic, useTemporaryHome } from '../test-support/helpers.mjs';
 
 const script = fileURLToPath(new URL('../scripts/timatic.mjs', import.meta.url));
 

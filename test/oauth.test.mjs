@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { test } from 'node:test';
 import { login } from '../scripts/lib/oauth.mjs';
-import { fakeTimatic, useTemporaryHome } from './helpers.mjs';
+import { fakeTimatic, useTemporaryHome } from '../test-support/helpers.mjs';
 
 test('logs in through the browser with pkce on a loopback port', async () => {
   useTemporaryHome();

@@ -18,7 +18,7 @@
             "type": "command",
             "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/timatic.mjs\" hook prompt-submitted",
             "async": true,
-            "timeout": 30
+            "timeout": 90
           }
         ]
       }
@@ -43,19 +43,7 @@
             "type": "command",
             "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/timatic.mjs\" hook question-answered",
             "async": true,
-            "timeout": 30
-          }
-        ]
-      }
-    ],
-    "Stop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/timatic.mjs\" hook response-completed",
-            "async": true,
-            "timeout": 30
+            "timeout": 90
           }
         ]
       }
