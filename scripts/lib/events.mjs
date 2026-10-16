@@ -73,10 +73,11 @@ function isRetryable(error) {
 
 /**
  * Sends the event together with whatever earlier hooks could not deliver. A network error, an
- * expired token or a server error keeps an event for later; a 422 means Timatic will never take
- * it, so it is dropped rather than retried forever.
+ * expired or revoked token or a server error keeps an event for later, so nothing is lost while
+ * the user logs in again; a 422 means Timatic will never take it, so it is dropped rather than
+ * retried forever.
  *
- * @returns {Promise<{sent: number, queued: number, dropped: Array<string>}>}
+ * @returns {Promise<{sent: number, queued: number, dropped: Array<string>, unauthorized: boolean}>}
  */
 export async function sendEvents(credentials, events, now = Date.now()) {
   const queued = readJson(queuePath(), []) ?? [];
@@ -89,6 +90,7 @@ export async function sendEvents(credentials, events, now = Date.now()) {
   const dropped = [];
   let sent = 0;
   let unreachable = false;
+  let unauthorized = false;
 
   for (const item of pending) {
     if (unreachable) {
@@ -103,6 +105,7 @@ export async function sendEvents(credentials, events, now = Date.now()) {
       if (isRetryable(error)) {
         remaining.push(item);
         unreachable = true;
+        unauthorized = error.status === 401;
       } else {
         dropped.push(error.message);
       }
@@ -113,7 +116,20 @@ export async function sendEvents(credentials, events, now = Date.now()) {
     writeJson(queuePath(), remaining.slice(-QUEUE_LIMIT));
   }
 
-  return { sent, queued: remaining.length, dropped };
+  return { sent, queued: remaining.length, dropped, unauthorized };
+}
+
+/**
+ * Events are queued with the id of the user who made them. Whoever logs in next must not send
+ * someone else's, so those are dropped.
+ */
+export function keepQueuedEventsOf(userId) {
+  const queued = readJson(queuePath(), []) ?? [];
+  const kept = queued.filter((item) => item.body?.data?.attributes?.userId === userId);
+
+  if (kept.length !== queued.length) {
+    writeJson(queuePath(), kept);
+  }
 }
 
 export function queuedCount() {

@@ -46,7 +46,7 @@ async function timaticWithBudgets() {
     return { status: 404, json: {} };
   });
 
-  saveCredentials({ baseUrl: timatic.baseUrl, token: 't', expiresAt: null, user: { id: 1, fullName: 'T', email: 't@x' } });
+  saveCredentials({ baseUrl: timatic.baseUrl, token: 't', user: { id: 1, fullName: 'T', email: 't@x' } });
 
   return timatic;
 }

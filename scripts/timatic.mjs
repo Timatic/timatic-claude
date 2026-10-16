@@ -2,9 +2,9 @@
 import { basename } from 'node:path';
 import { fetchBudget, fetchBudgets, fetchCustomer, fetchCustomers } from './lib/api.mjs';
 import {
-  findProject, forgetCredentials, isExpired, loadCredentials, resolveBaseUrl, saveCredentials, saveProject, workingDir,
+  findProject, forgetCredentials, loadCredentials, resolveBaseUrl, saveCredentials, saveProject, workingDir,
 } from './lib/config.mjs';
-import { buildEvent, EVENT_TYPES, queuedCount, sendEvents } from './lib/events.mjs';
+import { buildEvent, EVENT_TYPES, keepQueuedEventsOf, queuedCount, sendEvents } from './lib/events.mjs';
 import { login, logout } from './lib/oauth.mjs';
 import { loadSession, pruneSessions, saveSession } from './lib/session.mjs';
 import { recentPrompts, rememberPrompt, summarize, SUMMARIZING_ENV, summaryKey } from './lib/summary.mjs';
@@ -162,8 +162,8 @@ export function sessionStartNotice(input, command = 'node "${CLAUDE_PLUGIN_ROOT}
 
   if (!credentials) {
     notices.push('The user is not logged in to Timatic, so nothing is sent yet. Suggest running /timatic:login first.');
-  } else if (isExpired(credentials)) {
-    notices.push('The Timatic login has expired, so nothing is sent until the user runs /timatic:login.');
+  } else if (credentials.rejectedAt) {
+    notices.push('Timatic no longer accepts the login (it expired or was revoked). Events are kept and sent once the user runs /timatic:login; suggest doing so.');
   }
 
   return notices.length ? `Timatic plugin: ${notices.join(' ')}` : '';
@@ -228,17 +228,21 @@ async function runHook(name) {
 
     const credentials = loadCredentials();
 
-    if (events.length === 0 || !credentials || isExpired(credentials)) {
+    if (events.length === 0 || !credentials) {
       return;
     }
 
     const description = await describe(input.session_id);
 
-    await sendEvents(credentials, events.map((event) => buildEvent({
+    const { unauthorized } = await sendEvents(credentials, events.map((event) => buildEvent({
       ...event,
       description: event.description ?? description,
       userId: credentials.user.id,
     })));
+
+    if (unauthorized && !credentials.rejectedAt) {
+      saveCredentials({ ...credentials, rejectedAt: new Date().toISOString() });
+    }
   } catch (error) {
     if (process.env.TIMATIC_DEBUG) {
       process.stderr.write(`timatic: ${error.stack ?? error.message}\n`);
@@ -264,6 +268,7 @@ const commands = {
     saveCredentials(credentials);
     console.log(`Logged in to ${baseUrl} as ${credentials.user.fullName} <${credentials.user.email}>.`);
 
+    keepQueuedEventsOf(credentials.user.id);
     const { sent } = await sendEvents(credentials, []);
 
     if (sent > 0) {
@@ -288,7 +293,7 @@ const commands = {
     const branchTicket = ticketFromBranch(workingDir(), config?.ticketPattern);
 
     console.log(credentials
-      ? `Logged in to ${credentials.baseUrl} as ${credentials.user.fullName} <${credentials.user.email}>${isExpired(credentials) ? ' (expired, run /timatic:login)' : ''}.`
+      ? `Logged in to ${credentials.baseUrl} as ${credentials.user.fullName} <${credentials.user.email}>${credentials.rejectedAt ? ', but Timatic no longer accepts that login: run /timatic:login' : ''}.`
       : 'Not logged in to Timatic.');
     console.log(config === null
       ? `Not decided yet whether ${directory} is tracked.`

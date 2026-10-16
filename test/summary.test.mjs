@@ -65,7 +65,7 @@ test('gives no summary when claude cannot be run', async () => {
 
 test('describes an unnamed session with a summary of its recent prompts', async () => {
   const timatic = await fakeTimatic(() => ({ status: 201, json: {} }));
-  saveCredentials({ baseUrl: timatic.baseUrl, token: 't', expiresAt: null, user: { id: 1, fullName: 'T', email: 't@x' } });
+  saveCredentials({ baseUrl: timatic.baseUrl, token: 't', user: { id: 1, fullName: 'T', email: 't@x' } });
 
   await hook('prompt-submitted', { session_id: 'u1', cwd: project, prompt: 'add a csv export' });
   await hook('prompt-submitted', { session_id: 'u1', cwd: project, prompt: 'with the budget column' });
@@ -82,7 +82,7 @@ test('describes an unnamed session with a summary of its recent prompts', async 
 
 test('uses the name the user gave the session instead of a summary', async () => {
   const timatic = await fakeTimatic(() => ({ status: 201, json: {} }));
-  saveCredentials({ baseUrl: timatic.baseUrl, token: 't', expiresAt: null, user: { id: 1, fullName: 'T', email: 't@x' } });
+  saveCredentials({ baseUrl: timatic.baseUrl, token: 't', user: { id: 1, fullName: 'T', email: 't@x' } });
 
   await hook('prompt-submitted', { session_id: 'u2', cwd: project, prompt: 'add a csv export', session_title: 'Export' });
   await timatic.close();
@@ -93,7 +93,7 @@ test('uses the name the user gave the session instead of a summary', async () =>
 
 test('does not summarise for a folder that is not tracked', async () => {
   saveProject(project, { tracked: false });
-  saveCredentials({ baseUrl: 'http://127.0.0.1:9', token: 't', expiresAt: null, user: { id: 1, fullName: 'T', email: 't@x' } });
+  saveCredentials({ baseUrl: 'http://127.0.0.1:9', token: 't', user: { id: 1, fullName: 'T', email: 't@x' } });
 
   await hook('prompt-submitted', { session_id: 'u3', cwd: project, prompt: 'add a csv export' });
 
@@ -101,7 +101,7 @@ test('does not summarise for a folder that is not tracked', async () => {
 });
 
 test('stays quiet inside the claude that writes a summary', async () => {
-  saveCredentials({ baseUrl: 'http://127.0.0.1:9', token: 't', expiresAt: null, user: { id: 1, fullName: 'T', email: 't@x' } });
+  saveCredentials({ baseUrl: 'http://127.0.0.1:9', token: 't', user: { id: 1, fullName: 'T', email: 't@x' } });
 
   await hook('prompt-submitted', { session_id: 'u4', cwd: project, prompt: 'Summarise these prompts' }, { TIMATIC_SUMMARIZING: '1' });
 

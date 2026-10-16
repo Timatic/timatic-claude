@@ -45,7 +45,9 @@ needs `node` 18 or later on your `PATH`.
 ## First use
 
 1. `/timatic:login` opens your browser. You log in to Timatic with your own account and approve
-   "Claude Code plugin". The plugin gets a token of its own, valid for 90 days.
+   "Claude Code plugin". The plugin gets a token of its own. It expires only after 90 days without
+   use: every use pushes the expiry forward, so while you keep using Claude Code you never have to
+   log in again.
 2. In every folder you have not decided on yet, Claude asks at the start of the session whether
    Timatic should track your time there. If so, it asks for which customer and, optionally, whether
    all work there is for one budget of that customer. Your answers are remembered for that folder
@@ -88,8 +90,9 @@ in at most ten words, and sends only that summary. This runs in the background a
 you track. Set `TIMATIC_CLAUDE_BIN` if `claude` is not on the `PATH` of your hooks.
 
 Nothing is sent from a folder you declined. Before you decide on a folder, events are held for the
-current session and sent once you say yes. When Timatic cannot be reached they are queued and sent
-with the next event.
+current session and sent once you say yes. When Timatic cannot be reached, or no longer accepts your
+login, events are queued (up to 500, for at most 30 days) and sent with the next event or right after
+`/timatic:login`. Events queued under another Timatic user are dropped when you log in.
 
 ## Ticket detection
 

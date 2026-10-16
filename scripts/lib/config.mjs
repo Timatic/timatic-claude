@@ -8,7 +8,10 @@ export function credentialsPath() {
 }
 
 /**
- * @returns {{baseUrl: string, token: string, expiresAt: ?string, user: {id: number, fullName: string, email: string}} | null}
+ * The token's expiry is not kept: Timatic pushes it forward every time it is used, so only
+ * Timatic knows. `rejectedAt` records when it last refused the token.
+ *
+ * @returns {{baseUrl: string, token: string, rejectedAt?: string, user: {id: number, fullName: string, email: string}} | null}
  */
 export function loadCredentials() {
   const credentials = readJson(credentialsPath());
@@ -26,10 +29,6 @@ export function saveCredentials(credentials) {
 
 export function forgetCredentials() {
   removeFile(credentialsPath());
-}
-
-export function isExpired(credentials, now = new Date()) {
-  return Boolean(credentials?.expiresAt) && new Date(credentials.expiresAt) <= now;
 }
 
 /**

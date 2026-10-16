@@ -129,7 +129,6 @@ export async function login(baseUrl, { log = console.error, open = openBrowser }
   return {
     baseUrl,
     token: issued.token,
-    expiresAt: issued.expiresAt ?? null,
     user: issued.user,
   };
 }

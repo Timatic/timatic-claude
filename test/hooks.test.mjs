@@ -5,7 +5,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { beforeEach, test } from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { saveCredentials, saveProject } from '../scripts/lib/config.mjs';
+import { loadCredentials, saveCredentials, saveProject } from '../scripts/lib/config.mjs';
+import { queuedCount, sendEvents } from '../scripts/lib/events.mjs';
 import { handleHook, sessionStartNotice } from '../scripts/timatic.mjs';
 import { fakeTimatic, useTemporaryHome } from '../test-support/helpers.mjs';
 
@@ -81,7 +82,7 @@ test('the ticket comes from the git branch when the prompt names none', () => {
 
 test('the hook posts the event to Timatic and stays silent', async () => {
   const timatic = await fakeTimatic(() => ({ status: 201, json: { data: {} } }));
-  saveCredentials({ baseUrl: timatic.baseUrl, token: 'secret', expiresAt: null, user: { id: 3, fullName: 'T', email: 't@x' } });
+  saveCredentials({ baseUrl: timatic.baseUrl, token: 'secret', user: { id: 3, fullName: 'T', email: 't@x' } });
 
   // Spawned asynchronously: a synchronous spawn would block the fake server in this process.
   const result = await runAsync(['hook', 'prompt-submitted'], { session_id: 's5', cwd: project, prompt: 'Fix ABC-1', session_title: 'Bugfix' });
@@ -162,4 +163,26 @@ test('a hook never fails, even on garbage input', () => {
   const result = spawnSync('node', [script, 'hook', 'prompt-submitted'], { input: 'not json', encoding: 'utf8', env: process.env });
 
   assert.equal(result.status, 0);
+});
+
+test('keeps events while Timatic refuses the token and sends them once the user logs in again', async () => {
+  const refusing = await fakeTimatic(() => ({ status: 401, json: { message: 'Unauthenticated.' } }));
+  saveCredentials({ baseUrl: refusing.baseUrl, token: 'old', user: { id: 3, fullName: 'T', email: 't@x' } });
+
+  await runAsync(['hook', 'prompt-submitted'], { session_id: 's11', cwd: project, prompt: 'one', session_title: 'Work' });
+  await runAsync(['hook', 'prompt-submitted'], { session_id: 's11', cwd: project, prompt: 'two', session_title: 'Work' });
+  await refusing.close();
+
+  assert.equal(queuedCount(), 2);
+  assert.ok(loadCredentials().rejectedAt);
+  assert.match(sessionStartNotice({ cwd: project }), /no longer accepts the login/);
+
+  const accepting = await fakeTimatic(() => ({ status: 201, json: {} }));
+  saveCredentials({ baseUrl: accepting.baseUrl, token: 'new', user: { id: 3, fullName: 'T', email: 't@x' } });
+  const result = await sendEvents(loadCredentials(), []);
+  await accepting.close();
+
+  assert.equal(result.sent, 2);
+  assert.equal(queuedCount(), 0);
+  assert.equal(sessionStartNotice({ cwd: project }), '');
 });
