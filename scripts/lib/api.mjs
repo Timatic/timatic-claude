@@ -99,6 +99,31 @@ export async function fetchBudgets(baseUrl, token, customerId) {
     .sort((a, b) => a.title.localeCompare(b.title));
 }
 
+/**
+ * A ticket and the customer and budget Timatic maps it to, or null when no integration knows it.
+ *
+ * @returns {Promise<?{key: string, title: string, customerId: ?number, budgetId: ?number}>}
+ */
+export async function fetchTicket(baseUrl, token, key) {
+  try {
+    const json = await request(baseUrl, `/tickets/${encodeURIComponent(key)}`, { token });
+    const attributes = json?.data?.attributes ?? {};
+
+    return {
+      key: attributes.key ?? key,
+      title: attributes.title ?? '',
+      customerId: attributes.customerId ?? null,
+      budgetId: attributes.budgetId ?? null,
+    };
+  } catch (error) {
+    if (error.status === 404) {
+      return null;
+    }
+
+    throw error;
+  }
+}
+
 export async function fetchBudget(baseUrl, token, budgetId) {
   const json = await request(baseUrl, `/budgets/${encodeURIComponent(budgetId)}`, { token });
 

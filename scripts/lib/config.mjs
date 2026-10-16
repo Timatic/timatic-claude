@@ -60,7 +60,7 @@ export function normalizeBaseUrl(url) {
  * data rather than in the repository: it is a personal choice, and a folder may not be a
  * repository at all. A choice applies to every folder below it, so the closest one wins.
  *
- * @typedef {{tracked: boolean, customerId?: number, customerName?: string, budgetId?: ?number, budgetTitle?: ?string, isInternal?: boolean, ticketPattern?: string, decidedAt?: string}} ProjectConfig
+ * @typedef {{tracked: boolean, perTicket?: boolean, customerId?: ?number, customerName?: string, budgetId?: ?number, budgetTitle?: ?string, isInternal?: boolean, ticketPattern?: string, decidedAt?: string}} ProjectConfig
  */
 function projectsPath() {
   return join(dataDir(), 'projects.json');

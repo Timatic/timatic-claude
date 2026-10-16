@@ -1,11 +1,12 @@
 import assert from 'node:assert/strict';
-import { spawn } from 'node:child_process';
+import { execFileSync, spawn } from 'node:child_process';
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { beforeEach, test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { findProject, saveCredentials, saveProject } from '../scripts/lib/config.mjs';
+import { sessionStartNotice } from '../scripts/timatic.mjs';
 import { fakeTimatic, useTemporaryHome } from '../test-support/helpers.mjs';
 
 const script = fileURLToPath(new URL('../scripts/timatic.mjs', import.meta.url));
@@ -109,4 +110,52 @@ test('declining a folder is remembered', async () => {
   await run('track', 'off');
 
   assert.equal(findProject(folder).config.tracked, false);
+});
+
+test('suggests the customer and budget the branch ticket is mapped to', async () => {
+  execFileSync('git', ['init', '-q', '-b', 'feature/acme-12-login'], { cwd: folder });
+
+  const timatic = await fakeTimatic((request) => {
+    if (request.url === '/tickets/ACME-12') {
+      return { json: { data: { type: 'tickets', id: 'ACME-12', attributes: { key: 'ACME-12', title: 'Login', customerId: 8, budgetId: 9 } } } };
+    }
+
+    if (request.url === '/customers/8') {
+      return { json: { data: { type: 'customers', id: '8', attributes: { name: 'Globex' } } } };
+    }
+
+    if (request.url === '/budgets/9') {
+      return { json: { data: budget(9, 'Support', 8) } };
+    }
+
+    return { status: 404, json: {} };
+  });
+  saveCredentials({ baseUrl: timatic.baseUrl, token: 't', user: { id: 1, fullName: 'T', email: 't@x' } });
+
+  const result = await run('suggest');
+  await timatic.close();
+
+  assert.equal(result.stdout, 'Ticket ACME-12 (Login) is mapped to customer Globex (#8) and budget Support (#9).\n');
+});
+
+test('says so when the ticket is unknown', async () => {
+  const timatic = await fakeTimatic(() => ({ status: 404, json: {} }));
+  saveCredentials({ baseUrl: timatic.baseUrl, token: 't', user: { id: 1, fullName: 'T', email: 't@x' } });
+
+  const result = await run('suggest', 'nope-1');
+  await timatic.close();
+
+  assert.equal(result.stdout, 'Timatic does not know ticket NOPE-1.\n');
+});
+
+test('tracks a folder per ticket, without a customer of its own', async () => {
+  saveProject(folder, { budgetId: 1, budgetTitle: 'Development' });
+
+  await run('track', 'per-ticket');
+
+  const { config } = findProject(folder);
+  assert.equal(config.perTicket, true);
+  assert.equal(config.customerId, null);
+  assert.equal(config.budgetId, null);
+  assert.doesNotMatch(sessionStartNotice({ cwd: folder }), /No Timatic customer/);
 });

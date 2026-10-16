@@ -61,7 +61,7 @@ needs `node` 18 or later on your `PATH`.
 | `/timatic:logout` | Revoke this installation's token |
 | `/timatic:customer [search]` | Choose the customer for the current folder (turns tracking on) |
 | `/timatic:budget [search\|none]` | Book all work in the current folder on one budget of its customer, or on none |
-| `/timatic:track on\|off` | Turn tracking on or off for the current folder |
+| `/timatic:track on\|off\|per-ticket` | Turn tracking on or off for the current folder, or book it per ticket |
 | `/timatic:ticket <KEY\|clear>` | Set the ticket for the rest of this session |
 | `/timatic:status` | Show login, folder, customer, budget, ticket from the git branch and the outgoing queue |
 
@@ -76,7 +76,7 @@ Each event carries:
 
 - `sourceId`: `claude_code`
 - `userId`: the user you logged in as
-- `customerId`: the customer chosen for the folder
+- `customerId`: the customer chosen for the folder (Timatic overrides it for a mapped ticket, see below)
 - `budgetId`: the budget chosen for the folder, if any
 - `ticketNumber`: the ticket, when one is known (see below)
 - `title`: `Claude Code: <folder name>`
@@ -105,6 +105,19 @@ in this order wins:
 
 Common look-alikes such as `UTF-8`, `SHA-256` and `ISO-8601` are ignored. For another key format,
 set `ticketPattern` (a JavaScript regular expression) on the folder in `projects.json`, see below.
+
+## Customer and budget from the ticket
+
+A ticket is the best evidence of where work belongs: one repository can hold work for several
+customers, but a ticket belongs to one. When an event names a ticket whose project is mapped in
+Timatic (for Jira: the project mapping in the Jira integration), Timatic books the event on that
+customer and budget, whatever the folder says. The folder's customer and budget cover everything
+else.
+
+When you set up a folder, Claude first looks up the ticket in the git branch and proposes its
+customer and budget. For a folder with work for several customers, choose "Per ticket"
+(`/timatic:track per-ticket`): the folder then has no customer of its own, and each event follows
+its ticket.
 
 ## Where things are stored
 
