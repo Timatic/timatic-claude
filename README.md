@@ -11,14 +11,14 @@ This repository is its own plugin marketplace (`.claude-plugin/marketplace.json`
 installs it straight from GitHub. Nothing has to be uploaded anywhere. In Claude Code:
 
 ```
-/plugin marketplace add tomasvanrijsse/timatic-claude
+/plugin marketplace add Timatic/timatic-claude
 /plugin install timatic@timatic
 ```
 
 Or from a terminal:
 
 ```
-claude plugin marketplace add tomasvanrijsse/timatic-claude
+claude plugin marketplace add Timatic/timatic-claude
 claude plugin install timatic@timatic
 ```
 
@@ -32,7 +32,7 @@ To roll it out to a whole team, add the marketplace and plugin to a project's
 ```json
 {
   "extraKnownMarketplaces": {
-    "timatic": { "source": { "source": "github", "repo": "tomasvanrijsse/timatic-claude" } }
+    "timatic": { "source": { "source": "github", "repo": "Timatic/timatic-claude" } }
   },
   "enabledPlugins": { "timatic@timatic": true }
 }

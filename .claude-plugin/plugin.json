@@ -7,7 +7,7 @@
     "name": "Tomas van Rijsse",
     "email": "tomas@pionect.nl"
   },
-  "repository": "https://github.com/tomasvanrijsse/timatic-claude",
+  "repository": "https://github.com/Timatic/timatic-claude",
   "license": "MIT",
   "keywords": ["timatic", "time-tracking", "hooks"],
   "userConfig": {
