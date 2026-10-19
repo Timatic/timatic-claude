@@ -9,13 +9,5 @@
   },
   "repository": "https://github.com/Timatic/timatic-claude",
   "license": "MIT",
-  "keywords": ["timatic", "time-tracking", "hooks"],
-  "userConfig": {
-    "timatic_url": {
-      "type": "string",
-      "title": "Timatic url",
-      "description": "Base url of your Timatic backend, for example https://api.timatic.example. Used for login and for sending events.",
-      "required": false
-    }
-  }
+  "keywords": ["timatic", "time-tracking", "hooks"]
 }

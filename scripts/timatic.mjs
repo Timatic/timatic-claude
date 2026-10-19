@@ -142,6 +142,15 @@ export function sessionStartNotice(input, command = 'node "${CLAUDE_PLUGIN_ROOT}
     return '';
   }
 
+  // Choosing a customer needs Timatic, so the folder waits until the login works.
+  if (!credentials) {
+    return 'Timatic plugin: The user has not set up Timatic yet, so nothing is sent. Suggest running /timatic:login, which asks for their Timatic url and logs them in.';
+  }
+
+  if (credentials.rejectedAt) {
+    return 'Timatic plugin: Timatic no longer accepts the login (it expired or was revoked). Events are kept and sent once the user runs /timatic:login; suggest doing so.';
+  }
+
   const notices = [];
 
   if (config === null) {
@@ -162,12 +171,6 @@ export function sessionStartNotice(input, command = 'node "${CLAUDE_PLUGIN_ROOT}
     );
   } else if (!Number.isInteger(config.customerId) && !config.perTicket) {
     notices.push(`No Timatic customer is set for ${directory}, so time arrives without one. Suggest running /timatic:customer.`);
-  }
-
-  if (!credentials) {
-    notices.push('The user is not logged in to Timatic, so nothing is sent yet. Suggest running /timatic:login first.');
-  } else if (credentials.rejectedAt) {
-    notices.push('Timatic no longer accepts the login (it expired or was revoked). Events are kept and sent once the user runs /timatic:login; suggest doing so.');
   }
 
   return notices.length ? `Timatic plugin: ${notices.join(' ')}` : '';
@@ -265,7 +268,7 @@ const commands = {
     const baseUrl = resolveBaseUrl(argument(args, '--url'));
 
     if (!baseUrl) {
-      throw new Error('No Timatic url known. Pass it with --url https://your-timatic-backend');
+      throw new Error('No Timatic url known. Ask the user for it and pass it with --url https://your-timatic-backend');
     }
 
     const credentials = await login(baseUrl);
@@ -277,6 +280,12 @@ const commands = {
 
     if (sent > 0) {
       console.log(`Delivered ${sent} event(s) that were waiting.`);
+    }
+
+    const notice = sessionStartNotice({}, `node "${process.argv[1]}"`);
+
+    if (notice) {
+      console.log(notice);
     }
   },
 

@@ -38,17 +38,16 @@ To roll it out to a whole team, add the marketplace and plugin to a project's
 }
 ```
 
-Claude Code asks for your Timatic url when you enable the plugin, for example
-`https://api.timatic.example`. You can also leave it empty and pass it on first login. The plugin
-needs `node` 18 or later on your `PATH`.
+The plugin needs `node` 18 or later on your `PATH`.
 
 ## First use
 
-1. `/timatic:login` opens your browser. You log in to Timatic with your own account and approve
+1. Run `/timatic:login`. It asks for your Timatic url (for example `https://api.timatic.example`;
+   set `TIMATIC_URL` to skip the question) and opens your browser. You log in to Timatic with your own account and approve
    "Claude Code plugin". The plugin gets a token of its own. It expires only after 90 days without
    use: every use pushes the expiry forward, so while you keep using Claude Code you never have to
    log in again.
-2. In every folder you have not decided on yet, Claude asks at the start of the session whether
+2. Right after login, and in every folder you have not decided on yet at the start of a session, Claude asks whether
    Timatic should track your time there. If so, it asks for which customer and, optionally, whether
    all work there is for one budget of that customer. Your answers are remembered for that folder
    and every folder below it.
@@ -57,7 +56,7 @@ needs `node` 18 or later on your `PATH`.
 
 | Command | What it does |
 |---|---|
-| `/timatic:login [--url <url>]` | Log in, or log in again after the token expired |
+| `/timatic:login [--url <url>]` | Set up: ask for the url and log in, or log in again after the token expired |
 | `/timatic:logout` | Revoke this installation's token |
 | `/timatic:customer [search]` | Choose the customer for the current folder (turns tracking on) |
 | `/timatic:budget [search\|none]` | Book all work in the current folder on one budget of its customer, or on none |

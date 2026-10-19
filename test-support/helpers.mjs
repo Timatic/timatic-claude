@@ -7,7 +7,6 @@ export function useTemporaryHome() {
   const home = mkdtempSync(join(tmpdir(), 'timatic-test-'));
   process.env.TIMATIC_HOME = home;
   delete process.env.CLAUDE_PROJECT_DIR;
-  delete process.env.CLAUDE_PLUGIN_OPTION_TIMATIC_URL;
   delete process.env.TIMATIC_URL;
 
   return home;

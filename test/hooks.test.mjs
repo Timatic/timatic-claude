@@ -112,6 +112,7 @@ test('the hook posts the event to Timatic and stays silent', async () => {
 });
 
 test('the session start has Claude ask whether to track a folder nobody decided on yet', () => {
+  saveCredentials({ baseUrl: 'https://timatic.test', token: 't', user: { id: 1, fullName: 'T', email: 't@x' } });
   const undecided = mkdtempSync(join(tmpdir(), 'timatic-bare-'));
 
   const result = spawnSync('node', [script, 'hook', 'session-start'], {
@@ -122,7 +123,15 @@ test('the session start has Claude ask whether to track a folder nobody decided 
 
   assert.match(result.stdout, /Should Timatic track your time in this folder\?/);
   assert.match(result.stdout, /node "\/plugin\/scripts\/timatic.mjs" track off/);
-  assert.match(result.stdout, /\/timatic:login/);
+});
+
+test('the session start only suggests logging in before Timatic is set up', () => {
+  const undecided = mkdtempSync(join(tmpdir(), 'timatic-bare-'));
+
+  const notice = sessionStartNotice({ cwd: undecided });
+
+  assert.match(notice, /\/timatic:login/);
+  assert.doesNotMatch(notice, /Should Timatic track/);
 });
 
 test('the session start stays silent in a folder the user declined', () => {

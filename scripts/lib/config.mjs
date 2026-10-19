@@ -32,12 +32,10 @@ export function forgetCredentials() {
 }
 
 /**
- * An explicit url wins, then the one configured when the plugin was enabled, then the one the
- * current token was issued by.
+ * An explicit url wins, then TIMATIC_URL, then the one the current token was issued by.
  */
 export function resolveBaseUrl(explicitUrl) {
   const url = explicitUrl
-    || process.env.CLAUDE_PLUGIN_OPTION_TIMATIC_URL
     || process.env.TIMATIC_URL
     || loadCredentials()?.baseUrl;
 

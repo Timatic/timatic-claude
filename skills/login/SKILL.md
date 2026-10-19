@@ -1,10 +1,10 @@
 ---
-description: Log in to Timatic with your own account so your Claude Code prompts and answers are logged as time events. Use when the user wants to connect, log in to or re-authenticate with Timatic.
+description: Set up Timatic - ask for the Timatic url, log in with your own account so your Claude Code prompts and answers are logged as time events, then set up this folder. Use when the user wants to set up, connect, log in to or re-authenticate with Timatic.
 disable-model-invocation: true
-allowed-tools: Bash(node "${CLAUDE_PLUGIN_ROOT}/scripts/timatic.mjs" login*)
+allowed-tools: Bash(node "${CLAUDE_PLUGIN_ROOT}/scripts/timatic.mjs" *)
 ---
 
-Log the user in to Timatic.
+Set up Timatic for the user.
 
 1. Run this command with a Bash timeout of 300000 ms, because it waits for the user to finish logging in in the browser:
 
@@ -12,6 +12,6 @@ Log the user in to Timatic.
    node "${CLAUDE_PLUGIN_ROOT}/scripts/timatic.mjs" login $ARGUMENTS
    ```
 
-2. If it answers that no Timatic url is known, ask the user for the url of their Timatic backend and run it again with `--url <url>`.
+2. If it answers that no Timatic url is known, ask the user for the url of their Timatic backend (for example `https://api.timatic.example`), wait for their answer and run it again with `--url <url>`.
 3. While it waits, tell the user a browser window opened (and show the printed url in case it did not).
-4. Report the outcome in one line. If no customer is set for this project yet, suggest `/timatic:customer`.
+4. Report the outcome in one line. If the output ends with a `Timatic plugin:` notice, follow its instructions now.
