@@ -6,7 +6,6 @@ import { join } from 'node:path';
 import { beforeEach, test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { findProject, saveCredentials, saveProject } from '../scripts/lib/config.mjs';
-import { sessionStartNotice } from '../scripts/timatic.mjs';
 import { fakeTimatic, useTemporaryHome } from '../test-support/helpers.mjs';
 
 const script = fileURLToPath(new URL('../scripts/timatic.mjs', import.meta.url));
@@ -146,16 +145,4 @@ test('says so when the ticket is unknown', async () => {
   await timatic.close();
 
   assert.equal(result.stdout, 'Timatic does not know ticket NOPE-1.\n');
-});
-
-test('tracks a folder per ticket, without a customer of its own', async () => {
-  saveProject(folder, { budgetId: 1, budgetTitle: 'Development' });
-
-  await run('track', 'per-ticket');
-
-  const { config } = findProject(folder);
-  assert.equal(config.perTicket, true);
-  assert.equal(config.customerId, null);
-  assert.equal(config.budgetId, null);
-  assert.doesNotMatch(sessionStartNotice({ cwd: folder }), /No Timatic customer/);
 });

@@ -161,15 +161,13 @@ export function sessionStartNotice(input, command = 'node "${CLAUDE_PLUGIN_ROOT}
       `On "No", run \`${command} track off\` and carry on with their request.`,
       `On "Yes", first run \`${command} suggest\`: when the ticket in the git branch is mapped in Timatic, it names that customer and budget.`,
       `Then run \`${command} customers\` (lines of id<TAB>name) and ask which customer this folder is for.`,
-      'Offer the suggested customer (with its budget) first, marked as recommended,',
-      'and always offer "Per ticket" for a folder that holds work for several customers.',
-      `On "Per ticket", run \`${command} track per-ticket\` and carry on with their request.`,
+      'Offer the suggested customer (with its budget) first, marked as recommended.',
       `On a customer, run \`${command} set-customer <id>\`; for the suggested one with a budget, also \`${command} set-budget <id>\` and carry on.`,
       `Then run \`${command} budgets\` and, if it lists any, ask whether all work in this folder is for one specific budget;`,
       'this is optional, so always offer "No specific budget" as an option.',
       `On a budget, run \`${command} set-budget <id>\`. Then carry on with their request.`,
     );
-  } else if (!Number.isInteger(config.customerId) && !config.perTicket) {
+  } else if (!Number.isInteger(config.customerId)) {
     notices.push(`No Timatic customer is set for ${directory}, so time arrives without one. Suggest running /timatic:customer.`);
   }
 
@@ -312,11 +310,9 @@ const commands = {
       ? `Not decided yet whether ${directory} is tracked.`
       : !config.tracked
         ? `${directory} is not tracked.`
-        : config.perTicket
-          ? `${directory} is tracked per ticket: each event goes to the customer and budget its ticket is mapped to.`
-          : Number.isInteger(config.customerId)
+        : Number.isInteger(config.customerId)
           ? `${directory} is tracked on ${config.customerName ?? '?'} (#${config.customerId})${Number.isInteger(config.budgetId) ? `, budget ${config.budgetTitle ?? '?'} (#${config.budgetId})` : ', no specific budget'}.`
-            : `${directory} is tracked, without a customer.`);
+          : `${directory} is tracked, without a customer.`);
     console.log(`Ticket from the git branch: ${branchTicket ?? 'none'}.`);
     console.log(`Events waiting to be sent: ${queuedCount()}.`);
   },
@@ -355,7 +351,7 @@ const commands = {
       ? { budgetId: previous.budgetId ?? null, budgetTitle: previous.budgetTitle ?? null }
       : { budgetId: null, budgetTitle: null };
 
-    saveProject(directory, { tracked: true, perTicket: false, customerId: customer.id, customerName: customer.name, ...budget });
+    saveProject(directory, { tracked: true, customerId: customer.id, customerName: customer.name, ...budget });
     console.log(`Timatic now tracks ${directory} on ${customer.name} (#${customer.id}).`);
   },
 
@@ -452,17 +448,8 @@ const commands = {
   async track(args) {
     const directory = workingDir();
 
-    if (!['on', 'off', 'per-ticket'].includes(args[0])) {
-      throw new Error('Usage: track <on|off|per-ticket>');
-    }
-
-    if (args[0] === 'per-ticket') {
-      saveProject(directory, {
-        tracked: true, perTicket: true, customerId: null, customerName: null, budgetId: null, budgetTitle: null,
-      });
-      console.log(`Timatic tracks ${directory} and books each event on the customer and budget its ticket is mapped to.`);
-
-      return;
+    if (!['on', 'off'].includes(args[0])) {
+      throw new Error('Usage: track <on|off>');
     }
 
     saveProject(directory, { tracked: args[0] === 'on' });

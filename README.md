@@ -60,7 +60,7 @@ The plugin needs `node` 18 or later on your `PATH`.
 | `/timatic:logout` | Revoke this installation's token |
 | `/timatic:customer [search]` | Choose the customer for the current folder (turns tracking on) |
 | `/timatic:budget [search\|none]` | Book all work in the current folder on one budget of its customer, or on none |
-| `/timatic:track on\|off\|per-ticket` | Turn tracking on or off for the current folder, or book it per ticket |
+| `/timatic:track on\|off` | Turn tracking on or off for the current folder |
 | `/timatic:ticket <KEY\|clear>` | Set the ticket for the rest of this session |
 | `/timatic:status` | Show login, folder, customer, budget, ticket from the git branch and the outgoing queue |
 
@@ -114,9 +114,7 @@ customer and budget, whatever the folder says. The folder's customer and budget 
 else.
 
 When you set up a folder, Claude first looks up the ticket in the git branch and proposes its
-customer and budget. For a folder with work for several customers, choose "Per ticket"
-(`/timatic:track per-ticket`): the folder then has no customer of its own, and each event follows
-its ticket.
+customer and budget.
 
 ## Where things are stored
 
