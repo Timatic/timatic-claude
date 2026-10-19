@@ -35,4 +35,4 @@ Whenever an event names a ticket that is mapped in Timatic (for Jira: the projec
    node "${CLAUDE_PLUGIN_ROOT}/scripts/timatic.mjs" set-budget <id>
    ```
 
-5. Report the outcome in one line.
+5. Report the outcome in one line. If the output says the mapping was saved in a file to commit, pass that on.

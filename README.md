@@ -52,6 +52,24 @@ The plugin needs `node` 18 or later on your `PATH`.
    all work there is for one budget of that customer. Your answers are remembered for that folder
    and every folder below it.
 
+## Sharing a repository's mapping with your team
+
+In a git repository, the customer and budget (and the Timatic url) is saved in
+`.claude/timatic.json` at the repository root. Commit it: a teammate with the plugin is then tracked
+on the same customer and budget without being asked, and `/timatic:login` takes the url from it.
+Whether to track stays personal, so `/timatic:track off` still opts a teammate out. Add
+`ticketPattern` to this file for a repository whose tickets use another key format.
+
+```json
+{
+  "url": "https://api.timatic.example",
+  "customerId": 8,
+  "customerName": "Globex",
+  "budgetId": null,
+  "budgetTitle": null
+}
+```
+
 ## Commands
 
 | Command | What it does |
@@ -103,7 +121,8 @@ in this order wins:
 3. The git branch of the folder Claude Code runs in, for example `feature/abc-123-login-form`
 
 Common look-alikes such as `UTF-8`, `SHA-256` and `ISO-8601` are ignored. For another key format,
-set `ticketPattern` (a JavaScript regular expression) on the folder in `projects.json`, see below.
+set `ticketPattern` (a JavaScript regular expression) in the repository's `.claude/timatic.json`, or
+on the folder in `projects.json` (see below).
 
 ## Customer and budget from the ticket
 
@@ -121,8 +140,8 @@ customer and budget.
 In `~/.config/timatic-claude/` (or `$XDG_CONFIG_HOME/timatic-claude`, or `$TIMATIC_HOME`):
 
 - `credentials.json`: your token, readable by you only
-- `projects.json`: per folder, whether it is tracked and on which customer and budget. You can
-  also add `isInternal` and `ticketPattern` to a folder here.
+- `projects.json`: per folder, whether it is tracked, and outside git repositories also on which
+  customer and budget. You can also add `isInternal` and `ticketPattern` to a folder here.
 - `sessions/`: per session, its title, ticket, the prompts of the last 15 minutes and their
   summary. Pruned after 14 days.
 - `queue.json`: events waiting for Timatic to be reachable

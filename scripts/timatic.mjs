@@ -255,6 +255,12 @@ async function runHook(name) {
   }
 }
 
+function announceShared(sharedPath) {
+  if (sharedPath) {
+    console.log(`Saved in ${sharedPath}; commit it so your team books this repository the same way.`);
+  }
+}
+
 function argument(args, flag) {
   const index = args.indexOf(flag);
 
@@ -351,8 +357,9 @@ const commands = {
       ? { budgetId: previous.budgetId ?? null, budgetTitle: previous.budgetTitle ?? null }
       : { budgetId: null, budgetTitle: null };
 
-    saveProject(directory, { tracked: true, customerId: customer.id, customerName: customer.name, ...budget });
+    const sharedPath = saveProject(directory, { tracked: true, customerId: customer.id, customerName: customer.name, ...budget });
     console.log(`Timatic now tracks ${directory} on ${customer.name} (#${customer.id}).`);
+    announceShared(sharedPath);
   },
 
   /**
@@ -423,8 +430,9 @@ const commands = {
     }
 
     if (args[0] === 'none') {
-      saveProject(directory, { ...config, budgetId: null, budgetTitle: null });
+      const sharedPath = saveProject(directory, { ...config, budgetId: null, budgetTitle: null });
       console.log(`Work in ${directory} is no longer booked on a specific budget.`);
+      announceShared(sharedPath);
 
       return;
     }
@@ -441,8 +449,9 @@ const commands = {
       throw new Error(`Budget #${budget.id} does not belong to ${config.customerName ?? `customer #${config.customerId}`}.`);
     }
 
-    saveProject(directory, { ...config, budgetId: budget.id, budgetTitle: budget.title });
+    const sharedPath = saveProject(directory, { ...config, budgetId: budget.id, budgetTitle: budget.title });
     console.log(`Work in ${directory} is now booked on budget ${budget.title} (#${budget.id}).`);
+    announceShared(sharedPath);
   },
 
   async track(args) {

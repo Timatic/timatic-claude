@@ -1,11 +1,11 @@
 import assert from 'node:assert/strict';
 import { execFileSync, spawn } from 'node:child_process';
-import { mkdtempSync } from 'node:fs';
+import { mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { beforeEach, test } from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { findProject, saveCredentials, saveProject } from '../scripts/lib/config.mjs';
+import { findProject, saveCredentials, saveProject, sharedConfigPath } from '../scripts/lib/config.mjs';
 import { fakeTimatic, useTemporaryHome } from '../test-support/helpers.mjs';
 
 const script = fileURLToPath(new URL('../scripts/timatic.mjs', import.meta.url));
@@ -103,6 +103,32 @@ test('drops the budget when the customer changes', async () => {
 
   assert.equal(findProject(folder).config.customerId, 8);
   assert.equal(findProject(folder).config.budgetId, null);
+});
+
+test('shares the mapping of a git repository in a file the team commits', async () => {
+  execFileSync('git', ['init', '-q'], { cwd: folder });
+  const timatic = await timaticWithBudgets();
+  const result = await run('set-customer', '8');
+  await timatic.close();
+
+  assert.match(result.stdout, /commit it/);
+  assert.deepEqual(JSON.parse(readFileSync(sharedConfigPath(folder), 'utf8')), {
+    url: timatic.baseUrl, customerId: 8, customerName: 'Globex', budgetId: null, budgetTitle: null,
+  });
+});
+
+test('a teammate is tracked on the shared mapping until they turn it off', async () => {
+  execFileSync('git', ['init', '-q'], { cwd: folder });
+  saveProject(folder, { customerId: 8, customerName: 'Globex' });
+  useTemporaryHome();
+
+  assert.equal(findProject(folder).config.tracked, true);
+  assert.equal(findProject(folder).config.customerId, 8);
+
+  await run('track', 'off');
+
+  assert.equal(findProject(folder).config.tracked, false);
+  assert.equal(findProject(folder).config.customerId, 8);
 });
 
 test('declining a folder is remembered', async () => {

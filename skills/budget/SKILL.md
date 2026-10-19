@@ -15,4 +15,4 @@ Choose the budget for the folder Claude Code runs in. A budget is optional: with
 
    Each line is `<id><TAB><title>`. If it says no customer is chosen yet, follow `/timatic:customer` instead.
 3. If exactly one budget matches what the user asked for, use it. Otherwise ask the user to pick one, and always offer "No specific budget" as an option.
-4. Run `node "${CLAUDE_PLUGIN_ROOT}/scripts/timatic.mjs" set-budget <id>`, or `set-budget none` for no specific budget, and report the outcome in one line.
+4. Run `node "${CLAUDE_PLUGIN_ROOT}/scripts/timatic.mjs" set-budget <id>`, or `set-budget none` for no specific budget, and report the outcome in one line. If the output says the mapping was saved in a file to commit, pass that on.

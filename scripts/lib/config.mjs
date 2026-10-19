@@ -1,3 +1,4 @@
+import { execFileSync } from 'node:child_process';
 import { dirname, join, resolve } from 'node:path';
 import { dataDir, readJson, removeFile, writeJson } from './store.mjs';
 
@@ -32,11 +33,13 @@ export function forgetCredentials() {
 }
 
 /**
- * An explicit url wins, then TIMATIC_URL, then the one the current token was issued by.
+ * An explicit url wins, then TIMATIC_URL, then the repository's shared file, then the one the
+ * current token was issued by.
  */
 export function resolveBaseUrl(explicitUrl) {
   const url = explicitUrl
     || process.env.TIMATIC_URL
+    || findProject().config?.url
     || loadCredentials()?.baseUrl;
 
   return url ? normalizeBaseUrl(url) : null;
@@ -58,11 +61,43 @@ export function normalizeBaseUrl(url) {
  * data rather than in the repository: it is a personal choice, and a folder may not be a
  * repository at all. A choice applies to every folder below it, so the closest one wins.
  *
- * @typedef {{tracked: boolean, customerId?: ?number, customerName?: string, budgetId?: ?number, budgetTitle?: ?string, isInternal?: boolean, ticketPattern?: string, decidedAt?: string}} ProjectConfig
+ * @typedef {{tracked: boolean, url?: string, customerId?: ?number, customerName?: string, budgetId?: ?number, budgetTitle?: ?string, isInternal?: boolean, ticketPattern?: string, decidedAt?: string}} ProjectConfig
  */
 function projectsPath() {
   return join(dataDir(), 'projects.json');
 }
+
+/**
+ * The mapping of a git repository is shared with the team in a file they commit; whether to track
+ * stays personal, but a repository that has the file is tracked unless the user turned it off.
+ */
+const SHARED_FIELDS = ['url', 'customerId', 'customerName', 'budgetId', 'budgetTitle', 'ticketPattern'];
+
+export function sharedConfigPath(directory) {
+  return join(directory, '.claude', 'timatic.json');
+}
+
+function pick(object, keys) {
+  return Object.fromEntries(Object.entries(object).filter(([key, value]) => keys.includes(key) && value !== undefined));
+}
+
+/**
+ * Relative to the folder rather than --show-toplevel, which resolves symlinks and so would not
+ * match the path the folder's choices are keyed by.
+ */
+function gitRoot(directory) {
+  try {
+    return resolve(directory, execFileSync('git', ['rev-parse', '--show-cdup'], {
+      cwd: directory,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+      timeout: 2000,
+    }).trim());
+  } catch {
+    return null;
+  }
+}
+
 
 /**
  * @returns {Record<string, ProjectConfig>}
@@ -87,6 +122,14 @@ export function findProject(cwd) {
   const start = workingDir(cwd);
 
   for (let directory = start; ; directory = dirname(directory)) {
+    const shared = readJson(sharedConfigPath(directory));
+
+    if (shared) {
+      const personal = projects[directory];
+
+      return { directory, config: { ...personal, ...pick(shared, SHARED_FIELDS), tracked: personal?.tracked ?? true } };
+    }
+
     if (projects[directory]) {
       return { directory, config: projects[directory] };
     }
@@ -98,12 +141,32 @@ export function findProject(cwd) {
 }
 
 /**
+ * In a git repository the mapping goes to the shared file in its root, and only the personal choice
+ * to track it to the plugin's own data.
+ *
  * @param {Partial<ProjectConfig>} change
+ * @returns {?string} the shared file when it was written, so the user can be told to commit it.
  */
 export function saveProject(directory, change, now = new Date()) {
+  const root = gitRoot(directory);
+  const sharedChange = pick(change, SHARED_FIELDS);
+  let sharedPath = null;
+  let personalChange = change;
+
+  if (root) {
+    directory = root;
+    personalChange = Object.fromEntries(Object.entries(change).filter(([key]) => !SHARED_FIELDS.includes(key)));
+
+    if (Object.keys(sharedChange).length > 0) {
+      sharedPath = sharedConfigPath(root);
+      const url = readJson(sharedPath)?.url ?? loadCredentials()?.baseUrl;
+      writeJson(sharedPath, { ...readJson(sharedPath), url, ...sharedChange }, 0o644);
+    }
+  }
+
   const projects = loadProjects();
-  projects[directory] = { ...projects[directory], ...change, decidedAt: now.toISOString() };
+  projects[directory] = { ...projects[directory], ...personalChange, decidedAt: now.toISOString() };
   writeJson(projectsPath(), projects);
 
-  return projects[directory];
+  return sharedPath;
 }

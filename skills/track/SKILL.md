@@ -6,4 +6,4 @@ allowed-tools: Bash(node "${CLAUDE_PLUGIN_ROOT}/scripts/timatic.mjs" track*)
 
 Run `node "${CLAUDE_PLUGIN_ROOT}/scripts/timatic.mjs" track $ARGUMENTS`. If the user gave neither `on` nor `off`, ask them first. Report the outcome in one line. After `on`, offer `/timatic:customer` when no customer is set yet.
 
-The choice is saved per folder in the plugin's own data, not in the repository. It applies to every folder below this one, unless a subfolder has a choice of its own.
+Whether to track is saved per folder in the plugin's own data, not in the repository. A choice applies to every folder below this one, unless a subfolder has a choice of its own.
