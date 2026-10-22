@@ -113,7 +113,7 @@ test('shares the mapping of a git repository in a file the team commits', async 
 
   assert.match(result.stdout, /commit it/);
   assert.deepEqual(JSON.parse(readFileSync(sharedConfigPath(folder), 'utf8')), {
-    url: timatic.baseUrl, customerId: 8, customerName: 'Globex', budgetId: null, budgetTitle: null,
+    customerId: 8, customerName: 'Globex', budgetId: null, budgetTitle: null,
   });
 });
 

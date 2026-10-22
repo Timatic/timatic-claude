@@ -33,13 +33,11 @@ export function forgetCredentials() {
 }
 
 /**
- * An explicit url wins, then TIMATIC_URL, then the repository's shared file, then the one the
- * current token was issued by.
+ * An explicit url wins, then TIMATIC_URL, then the one the current token was issued by.
  */
 export function resolveBaseUrl(explicitUrl) {
   const url = explicitUrl
     || process.env.TIMATIC_URL
-    || findProject().config?.url
     || loadCredentials()?.baseUrl;
 
   return url ? normalizeBaseUrl(url) : null;
@@ -61,7 +59,7 @@ export function normalizeBaseUrl(url) {
  * data rather than in the repository: it is a personal choice, and a folder may not be a
  * repository at all. A choice applies to every folder below it, so the closest one wins.
  *
- * @typedef {{tracked: boolean, url?: string, customerId?: ?number, customerName?: string, budgetId?: ?number, budgetTitle?: ?string, isInternal?: boolean, ticketPattern?: string, decidedAt?: string}} ProjectConfig
+ * @typedef {{tracked: boolean, customerId?: ?number, customerName?: string, budgetId?: ?number, budgetTitle?: ?string, isInternal?: boolean, ticketPattern?: string, decidedAt?: string}} ProjectConfig
  */
 function projectsPath() {
   return join(dataDir(), 'projects.json');
@@ -71,7 +69,7 @@ function projectsPath() {
  * The mapping of a git repository is shared with the team in a file they commit; whether to track
  * stays personal, but a repository that has the file is tracked unless the user turned it off.
  */
-const SHARED_FIELDS = ['url', 'customerId', 'customerName', 'budgetId', 'budgetTitle', 'ticketPattern'];
+const SHARED_FIELDS = ['customerId', 'customerName', 'budgetId', 'budgetTitle', 'ticketPattern'];
 
 export function sharedConfigPath(directory) {
   return join(directory, '.claude', 'timatic.json');
@@ -159,8 +157,7 @@ export function saveProject(directory, change, now = new Date()) {
 
     if (Object.keys(sharedChange).length > 0) {
       sharedPath = sharedConfigPath(root);
-      const url = readJson(sharedPath)?.url ?? loadCredentials()?.baseUrl;
-      writeJson(sharedPath, { ...readJson(sharedPath), url, ...sharedChange }, 0o644);
+      writeJson(sharedPath, { ...readJson(sharedPath), ...sharedChange }, 0o644);
     }
   }
 

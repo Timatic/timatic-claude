@@ -54,15 +54,14 @@ The plugin needs `node` 18 or later on your `PATH`.
 
 ## Sharing a repository's mapping with your team
 
-In a git repository, the customer and budget (and the Timatic url) is saved in
+In a git repository, the customer and budget are saved in
 `.claude/timatic.json` at the repository root. Commit it: a teammate with the plugin is then tracked
-on the same customer and budget without being asked, and `/timatic:login` takes the url from it.
+on the same customer and budget without being asked.
 Whether to track stays personal, so `/timatic:track off` still opts a teammate out. Add
 `ticketPattern` to this file for a repository whose tickets use another key format.
 
 ```json
 {
-  "url": "https://api.timatic.example",
   "customerId": 8,
   "customerName": "Globex",
   "budgetId": null,

@@ -8,7 +8,7 @@
     {
       "name": "timatic",
       "source": "./",
-      "description": "Logs your Claude Code prompts, answers and responses as events in Timatic."
+      "description": "Logs the topics of Claude Code sessions as events in Timatic."
     }
   ]
 }
