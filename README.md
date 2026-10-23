@@ -8,10 +8,14 @@ ticket.
 ## Install
 
 This repository is its own plugin marketplace (`.claude-plugin/marketplace.json`), so Claude Code
-installs it straight from GitHub. Nothing has to be uploaded anywhere. In Claude Code:
+installs it straight from GitHub. Nothing has to be uploaded anywhere. In Claude Code, run these
+one at a time:
 
 ```
 /plugin marketplace add Timatic/timatic-claude
+```
+
+```
 /plugin install timatic@timatic
 ```
 
