@@ -4,7 +4,7 @@ import { fetchBudget, fetchBudgets, fetchCustomer, fetchCustomers, fetchTicket }
 import {
   findProject, forgetCredentials, loadCredentials, resolveBaseUrl, saveCredentials, saveProject, workingDir,
 } from './lib/config.mjs';
-import { buildEvent, EVENT_TYPES, keepQueuedEventsOf, queuedCount, sendEvents } from './lib/events.mjs';
+import { buildEvent, EVENT_TYPES, keepQueuedEventsOf, sendEvents } from './lib/events.mjs';
 import { login, logout } from './lib/oauth.mjs';
 import { loadSession, pruneSessions, saveSession } from './lib/session.mjs';
 import { recentPrompts, rememberPrompt, summarize, SUMMARIZING_ENV, summaryKey } from './lib/summary.mjs';
@@ -168,7 +168,7 @@ export function sessionStartNotice(input, command = 'node "${CLAUDE_PLUGIN_ROOT}
       `On a budget, run \`${command} set-budget <id>\`. Then carry on with their request.`,
     );
   } else if (!Number.isInteger(config.customerId)) {
-    notices.push(`No Timatic customer is set for ${directory}, so time arrives without one. Suggest running /timatic:customer.`);
+    notices.push(`No Timatic customer is set for ${directory}, so time arrives without one. Suggest running /timatic:track.`);
   }
 
   return notices.length ? `Timatic plugin: ${notices.join(' ')}` : '';
@@ -304,25 +304,6 @@ const commands = {
     console.log('Logged out of Timatic.');
   },
 
-  async status() {
-    const credentials = loadCredentials();
-    const { directory, config } = findProject();
-    const branchTicket = ticketFromBranch(workingDir(), config?.ticketPattern);
-
-    console.log(credentials
-      ? `Logged in to ${credentials.baseUrl} as ${credentials.user.fullName} <${credentials.user.email}>${credentials.rejectedAt ? ', but Timatic no longer accepts that login: run /timatic:login' : ''}.`
-      : 'Not logged in to Timatic.');
-    console.log(config === null
-      ? `Not decided yet whether ${directory} is tracked.`
-      : !config.tracked
-        ? `${directory} is not tracked.`
-        : Number.isInteger(config.customerId)
-          ? `${directory} is tracked on ${config.customerName ?? '?'} (#${config.customerId})${Number.isInteger(config.budgetId) ? `, budget ${config.budgetTitle ?? '?'} (#${config.budgetId})` : ', no specific budget'}.`
-          : `${directory} is tracked, without a customer.`);
-    console.log(`Ticket from the git branch: ${branchTicket ?? 'none'}.`);
-    console.log(`Events waiting to be sent: ${queuedCount()}.`);
-  },
-
   async customers(args) {
     const credentials = requireCredentials();
     const search = args.join(' ').trim().toLowerCase();
@@ -404,7 +385,7 @@ const commands = {
     const { config } = findProject();
 
     if (!Number.isInteger(config?.customerId)) {
-      throw new Error('Choose a customer for this folder first, with /timatic:customer.');
+      throw new Error('Choose a customer for this folder first, with /timatic:track.');
     }
 
     const budgets = await fetchBudgets(credentials.baseUrl, credentials.token, config.customerId);
@@ -426,7 +407,7 @@ const commands = {
     const { config } = findProject(directory);
 
     if (!Number.isInteger(config?.customerId)) {
-      throw new Error('Choose a customer for this folder first, with /timatic:customer.');
+      throw new Error('Choose a customer for this folder first, with /timatic:track.');
     }
 
     if (args[0] === 'none') {
@@ -463,33 +444,8 @@ const commands = {
 
     saveProject(directory, { tracked: args[0] === 'on' });
     console.log(args[0] === 'on'
-      ? `Timatic tracks ${directory}. Choose its customer with /timatic:customer.`
+      ? `Timatic tracks ${directory}, without a customer yet. Choose one with /timatic:track.`
       : `Timatic no longer tracks ${directory}; nothing from here is sent. Undo with /timatic:track on.`);
-  },
-
-  async ticket(args) {
-    const sessionId = argument(args, '--session');
-    const key = args.filter((arg, index) => arg !== '--session' && args[index - 1] !== '--session')[0];
-
-    if (!sessionId) {
-      throw new Error('Usage: ticket <KEY|clear> --session <session id>');
-    }
-
-    const session = loadSession(sessionId);
-
-    if (!key || key === 'clear') {
-      delete session.ticket;
-      delete session.ticketSource;
-      saveSession(sessionId, session);
-      console.log('Ticket cleared; it is detected from prompts and the git branch again.');
-
-      return;
-    }
-
-    session.ticket = key.toUpperCase();
-    session.ticketSource = 'explicit';
-    saveSession(sessionId, session);
-    console.log(`This session is now logged on ticket ${session.ticket}.`);
   },
 };
 

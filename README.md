@@ -79,11 +79,7 @@ Whether to track stays personal, so `/timatic:track off` still opts a teammate o
 |---|---|
 | `/timatic:login [--url <url>]` | Set up: ask for the url and log in, or log in again after the token expired |
 | `/timatic:logout` | Revoke this installation's token |
-| `/timatic:customer [search]` | Choose the customer for the current folder (turns tracking on) |
-| `/timatic:budget [search\|none]` | Book all work in the current folder on one budget of its customer, or on none |
-| `/timatic:track on\|off` | Turn tracking on or off for the current folder |
-| `/timatic:ticket <KEY\|clear>` | Set the ticket for the rest of this session |
-| `/timatic:status` | Show login, folder, customer, budget, ticket from the git branch and the outgoing queue |
+| `/timatic:track [off\|customer]` | Track the current folder and choose its customer and optional budget, or stop tracking it |
 
 ## What is sent
 
@@ -119,9 +115,8 @@ login, events are queued (up to 500, for at most 30 days) and sent with the next
 The plugin looks for a Jira style key such as `ABC-123`. When several sources have one, the first
 in this order wins:
 
-1. A ticket set with `/timatic:ticket`
-2. The last key mentioned in one of your prompts in this session
-3. The git branch of the folder Claude Code runs in, for example `feature/abc-123-login-form`
+1. The last key mentioned in one of your prompts in this session
+2. The git branch of the folder Claude Code runs in, for example `feature/abc-123-login-form`
 
 Common look-alikes such as `UTF-8`, `SHA-256` and `ISO-8601` are ignored. For another key format,
 set `ticketPattern` (a JavaScript regular expression) in the repository's `.claude/timatic.json`, or

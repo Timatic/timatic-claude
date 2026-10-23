@@ -54,17 +54,12 @@ export function ticketFromBranch(cwd, pattern) {
 }
 
 /**
- * Picks the ticket for this turn. Something said explicitly beats something mentioned in passing:
- * a ticket set with /timatic:ticket stays until it is replaced, one named in a prompt replaces an
- * earlier one, and the branch only fills in when nothing better is known.
+ * Picks the ticket for this turn: one named in a prompt replaces an earlier one, and the branch
+ * only fills in when no prompt named one.
  *
  * @returns {{ticket: ?string, ticketSource: ?string}}
  */
 export function resolveTicket(session, { prompt, branchTicket, pattern }) {
-  if (session.ticketSource === 'explicit') {
-    return { ticket: session.ticket, ticketSource: 'explicit' };
-  }
-
   const fromPrompt = findTicket(prompt, pattern);
 
   if (fromPrompt) {

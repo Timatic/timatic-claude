@@ -32,12 +32,6 @@ test('finds no branch ticket outside a git repository', () => {
   assert.equal(ticketFromBranch(mkdtempSync(join(tmpdir(), 'timatic-nogit-'))), null);
 });
 
-test('an explicitly set ticket beats everything else', () => {
-  const session = { ticket: 'SET-1', ticketSource: 'explicit' };
-
-  assert.deepEqual(resolveTicket(session, { prompt: 'work on ABC-2', branchTicket: 'BR-3' }), { ticket: 'SET-1', ticketSource: 'explicit' });
-});
-
 test('a ticket from a prompt beats the branch and sticks for later turns', () => {
   const first = resolveTicket({}, { prompt: 'fix ABC-2', branchTicket: 'BR-3' });
   assert.deepEqual(first, { ticket: 'ABC-2', ticketSource: 'prompt' });
