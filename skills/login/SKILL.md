@@ -12,6 +12,6 @@ Set up Timatic for the user.
    node "${CLAUDE_PLUGIN_ROOT}/scripts/timatic.mjs" login $ARGUMENTS
    ```
 
-2. If it answers that no Timatic url is known, ask the user for the url of their Timatic backend (for example `https://api.timatic.example`), wait for their answer and run it again with `--url <url>`.
+2. If it answers that no Timatic url is known, ask the user for the url they open Timatic at (for example `https://acme.timatic.app`), wait for their answer and run it again with `--url <url>`.
 3. While it waits, tell the user a browser window opened (and show the printed url in case it did not).
 4. Report the outcome in one line. If the output ends with a `Timatic plugin:` notice, follow its instructions now.

@@ -43,8 +43,15 @@ export function resolveBaseUrl(explicitUrl) {
   return url ? normalizeBaseUrl(url) : null;
 }
 
+/**
+ * Users know the app at {tenant}.timatic.app, but its api lives at api.{tenant}.timatic.app.
+ */
 export function normalizeBaseUrl(url) {
-  const parsed = new URL(url);
+  const parsed = new URL(/^[a-z]+:\/\//i.test(url) ? url : `https://${url}`);
+
+  if (parsed.hostname.endsWith('.timatic.app') && !parsed.hostname.startsWith('api.')) {
+    parsed.hostname = `api.${parsed.hostname}`;
+  }
 
   if (parsed.protocol !== 'https:' && !['localhost', '127.0.0.1', '[::1]'].includes(parsed.hostname)
     && !parsed.hostname.endsWith('.test')) {
