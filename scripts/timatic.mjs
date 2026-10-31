@@ -100,7 +100,7 @@ export function handleHook(name, input, { now = new Date(), branchTicket } = {})
       startedAt,
       endedAt: now.toISOString(),
       ticket,
-      title: `Claude Code: ${basename(directory)}`,
+      folder: basename(directory),
     });
   }
 
@@ -239,11 +239,18 @@ async function runHook(name) {
 
     const description = await describe(input.session_id);
 
-    const { unauthorized } = await sendEvents(credentials, events.map((event) => buildEvent({
-      ...event,
-      description: event.description ?? description,
-      userId: credentials.user.id,
-    })));
+    const { unauthorized } = await sendEvents(credentials, events.map((event) => {
+      const eventDescription = event.description ?? description;
+      const folder = event.folder ?? basename(input.cwd ?? '');
+
+      // The folder alone tells nothing apart within a day, so the title leads with what the work was.
+      return buildEvent({
+        ...event,
+        title: eventDescription ? `${folder}: ${eventDescription}` : `Claude Code: ${folder}`,
+        description: eventDescription,
+        userId: credentials.user.id,
+      });
+    }));
 
     if (unauthorized && !credentials.rejectedAt) {
       saveCredentials({ ...credentials, rejectedAt: new Date().toISOString() });
