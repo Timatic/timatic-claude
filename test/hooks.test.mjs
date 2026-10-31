@@ -104,7 +104,7 @@ test('the hook posts the event to Timatic and stays silent', async () => {
       userId: 3,
       customerId: 7,
       ticketNumber: 'ABC-1',
-      title: `Claude Code: ${project.split('/').at(-1)}`,
+      title: `${project.split('/').at(-1)}: Bugfix`,
       description: 'Bugfix',
       endedAt: undefined,
     },
