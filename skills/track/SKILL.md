@@ -9,7 +9,7 @@ Set up tracking for the folder Claude Code runs in. The choices apply to every f
 Whenever an event names a ticket that is mapped in Timatic (for Jira: the project is mapped to a customer), Timatic books it on that ticket's customer and budget, whatever is chosen here. The choice here covers everything else.
 
 1. If the user asked for `off`, run `node "${CLAUDE_PLUGIN_ROOT}/scripts/timatic.mjs" track off`, report the outcome in one line and stop.
-2. Run `node "${CLAUDE_PLUGIN_ROOT}/scripts/timatic.mjs" suggest`. When the ticket in the git branch is mapped, it names that customer and budget: offer them first, as the recommended option.
+2. Run `node "${CLAUDE_PLUGIN_ROOT}/scripts/timatic.mjs" suggest`. When Timatic maps the repository, or the ticket in the git branch, it names that customer and budget: offer them first, as the recommended option.
 3. List the customers, filtered on the user's search text if given (leave out `on`):
 
    ```
@@ -18,7 +18,7 @@ Whenever an event names a ticket that is mapped in Timatic (for Jira: the projec
 
    Each line is `<id><TAB><name>`. If it answers that the user is not logged in, suggest `/timatic:login` and stop.
 4. If exactly one customer matches what the user asked for, use it. Otherwise ask the user to pick one, with the AskUserQuestion tool when there are four or fewer candidates, or by name from a short list.
-5. If the folder is in a git repository, ask where to save the mapping: "Only for me (Recommended)", kept in the plugin's own data and found again in every clone of the same remote, or "In the repository", as `.claude/timatic.json` the team commits. A mapping for the user beats the repository's one. Outside a git repository, skip this question and use `user`.
+5. If the folder is in a git repository, ask where to save the mapping: "Only for me (Recommended)", kept in the plugin's own data and found again in every clone of the same remote, or "In the repository", as `.claude/timatic.json` the team commits. A repository mapped in Timatic's Bitbucket or GitHub integration is shared already, so only for me is enough there. A mapping for the user beats the repository's one. Outside a git repository, skip this question and use `user`.
 6. Save it, which also turns tracking on: `node "${CLAUDE_PLUGIN_ROOT}/scripts/timatic.mjs" set-customer <id> --scope <repo|user>`. For the suggested customer with a budget, also run `set-budget <id>` with that budget and skip the next step.
 7. Run `node "${CLAUDE_PLUGIN_ROOT}/scripts/timatic.mjs" budgets`. If it lists budgets (`<id><TAB><title>`), ask whether all work in this folder is for one of them, and always offer "No specific budget" as an option. Then run `set-budget <id>`, or `set-budget none` for no specific budget; it is saved where the customer is.
 8. Report the outcome in one line. If the output says the mapping was saved in a file to commit, pass that on.

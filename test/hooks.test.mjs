@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { beforeEach, test } from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { loadCredentials, saveCredentials, saveProject } from '../scripts/lib/config.mjs';
+import { findProject, loadCredentials, saveCredentials, saveProject } from '../scripts/lib/config.mjs';
 import { queuedCount, sendEvents } from '../scripts/lib/events.mjs';
 import { handleHook, sessionStartNotice } from '../scripts/timatic.mjs';
 import { fakeTimatic, useTemporaryHome } from '../test-support/helpers.mjs';
@@ -125,19 +125,19 @@ test('the session start has Claude ask whether to track a folder nobody decided 
   assert.match(result.stdout, /node "\/plugin\/scripts\/timatic.mjs" track off/);
 });
 
-test('the session start only suggests logging in before Timatic is set up', () => {
+test('the session start only suggests logging in before Timatic is set up', async () => {
   const undecided = mkdtempSync(join(tmpdir(), 'timatic-bare-'));
 
-  const notice = sessionStartNotice({ cwd: undecided });
+  const notice = await sessionStartNotice({ cwd: undecided });
 
   assert.match(notice, /\/timatic:login/);
   assert.doesNotMatch(notice, /Should Timatic track/);
 });
 
-test('the session start stays silent in a folder the user declined', () => {
+test('the session start stays silent in a folder the user declined', async () => {
   saveProject(project, { tracked: false });
 
-  assert.equal(sessionStartNotice({ cwd: project }), '');
+  assert.equal(await sessionStartNotice({ cwd: project }), '');
 });
 
 test('a subfolder follows the choice made for its parent', () => {
@@ -184,7 +184,7 @@ test('keeps events while Timatic refuses the token and sends them once the user 
 
   assert.equal(queuedCount(), 2);
   assert.ok(loadCredentials().rejectedAt);
-  assert.match(sessionStartNotice({ cwd: project }), /no longer accepts the login/);
+  assert.match(await sessionStartNotice({ cwd: project }), /no longer accepts the login/);
 
   const accepting = await fakeTimatic(() => ({ status: 201, json: {} }));
   saveCredentials({ baseUrl: accepting.baseUrl, token: 'new', user: { id: 3, fullName: 'T', email: 't@x' } });
@@ -193,5 +193,27 @@ test('keeps events while Timatic refuses the token and sends them once the user 
 
   assert.equal(result.sent, 2);
   assert.equal(queuedCount(), 0);
-  assert.equal(sessionStartNotice({ cwd: project }), '');
+  assert.equal(await sessionStartNotice({ cwd: project }), '');
+});
+
+test('the session start silently saves the mapping Timatic has for the repository', async () => {
+  const timatic = await fakeTimatic((request) => {
+    if (request.url.startsWith('/git-repository-mappings?')) {
+      return { json: { data: [{ type: 'git-repository-mappings', id: 'bitbucket.org/acme/shop', attributes: { customerId: 8, budgetId: null } }] } };
+    }
+
+    return { json: { data: { type: 'customers', id: '8', attributes: { name: 'Globex' } } } };
+  });
+  saveCredentials({ baseUrl: timatic.baseUrl, token: 't', user: { id: 1, fullName: 'T', email: 't@x' } });
+  const repository = mkdtempSync(join(tmpdir(), 'timatic-repo-'));
+  execFileSync('git', ['init', '-q'], { cwd: repository });
+  execFileSync('git', ['remote', 'add', 'origin', 'git@bitbucket.org:acme/shop.git'], { cwd: repository });
+
+  const notice = await sessionStartNotice({ cwd: repository });
+  await timatic.close();
+
+  assert.equal(notice, '');
+  assert.equal(findProject(repository).config.customerId, 8);
+  assert.equal(findProject(repository).config.customerName, 'Globex');
+  assert.equal(findProject(repository).config.tracked, true);
 });

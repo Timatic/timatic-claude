@@ -1,8 +1,10 @@
 #!/usr/bin/env node
 import { basename } from 'node:path';
-import { fetchBudget, fetchBudgets, fetchCustomer, fetchCustomers, fetchTicket } from './lib/api.mjs';
 import {
-  findProject, forgetCredentials, loadCredentials, resolveBaseUrl, saveCredentials, saveProject, workingDir,
+  fetchBudget, fetchBudgets, fetchCustomer, fetchCustomers, fetchRepositoryMapping, fetchTicket,
+} from './lib/api.mjs';
+import {
+  findProject, forgetCredentials, gitRemoteUrl, loadCredentials, resolveBaseUrl, saveCredentials, saveProject, workingDir,
 } from './lib/config.mjs';
 import { buildEvent, EVENT_TYPES, keepQueuedEventsOf, sendEvents } from './lib/events.mjs';
 import { login, logout } from './lib/oauth.mjs';
@@ -134,7 +136,7 @@ export function handleHook(name, input, { now = new Date(), branchTicket } = {})
  * to the right command. Anything printed here ends up in Claude's context; once all is settled it
  * stays silent.
  */
-export function sessionStartNotice(input, command = 'node "${CLAUDE_PLUGIN_ROOT}/scripts/timatic.mjs"') {
+export async function sessionStartNotice(input, command = 'node "${CLAUDE_PLUGIN_ROOT}/scripts/timatic.mjs"') {
   const credentials = loadCredentials();
   const { directory, config } = findProject(input.cwd);
 
@@ -149,6 +151,10 @@ export function sessionStartNotice(input, command = 'node "${CLAUDE_PLUGIN_ROOT}
 
   if (credentials.rejectedAt) {
     return 'Timatic plugin: Timatic no longer accepts the login (it expired or was revoked). Events are kept and sent once the user runs /timatic:login; suggest doing so.';
+  }
+
+  if (config === null && await adoptRepositoryMapping(credentials, workingDir(input.cwd))) {
+    return '';
   }
 
   const notices = [];
@@ -166,6 +172,34 @@ export function sessionStartNotice(input, command = 'node "${CLAUDE_PLUGIN_ROOT}
   }
 
   return notices.length ? `Timatic plugin: ${notices.join(' ')}` : '';
+}
+
+/**
+ * A repository Timatic already maps needs no questions: its mapping is saved for the user, so it
+ * also holds when Timatic cannot be reached later.
+ */
+async function adoptRepositoryMapping(credentials, directory) {
+  const remoteUrl = gitRemoteUrl(directory);
+  const mapping = remoteUrl
+    ? await fetchRepositoryMapping(credentials.baseUrl, credentials.token, remoteUrl).catch(() => null)
+    : null;
+
+  if (!mapping) {
+    return false;
+  }
+
+  const customer = await fetchCustomer(credentials.baseUrl, credentials.token, mapping.customerId);
+  const budget = mapping.budgetId ? await fetchBudget(credentials.baseUrl, credentials.token, mapping.budgetId) : null;
+
+  saveProject(directory, {
+    tracked: true,
+    customerId: customer.id,
+    customerName: customer.name,
+    budgetId: budget?.id ?? null,
+    budgetTitle: budget?.title ?? null,
+  }, 'user');
+
+  return true;
 }
 
 /**
@@ -216,7 +250,7 @@ async function runHook(name) {
 
     if (name === 'session-start') {
       pruneSessions();
-      const notice = sessionStartNotice(input, `node "${process.env.CLAUDE_PLUGIN_ROOT ?? '${CLAUDE_PLUGIN_ROOT}'}/scripts/timatic.mjs"`);
+      const notice = await sessionStartNotice(input, `node "${process.env.CLAUDE_PLUGIN_ROOT ?? '${CLAUDE_PLUGIN_ROOT}'}/scripts/timatic.mjs"`);
 
       if (notice) {
         process.stdout.write(`${notice}\n`);
@@ -287,7 +321,7 @@ const commands = {
       console.log(`Delivered ${sent} event(s) that were waiting.`);
     }
 
-    const notice = sessionStartNotice({}, `node "${process.argv[1]}"`);
+    const notice = await sessionStartNotice({}, `node "${process.argv[1]}"`);
 
     if (notice) {
       console.log(notice);
@@ -351,6 +385,21 @@ const commands = {
    */
   async suggest(args) {
     const credentials = requireCredentials();
+    const remoteUrl = args[0] ? null : gitRemoteUrl(workingDir());
+    const repositoryMapping = remoteUrl && await fetchRepositoryMapping(credentials.baseUrl, credentials.token, remoteUrl);
+
+    if (repositoryMapping) {
+      const customer = await fetchCustomer(credentials.baseUrl, credentials.token, repositoryMapping.customerId);
+      const budget = repositoryMapping.budgetId
+        ? await fetchBudget(credentials.baseUrl, credentials.token, repositoryMapping.budgetId)
+        : null;
+
+      console.log(`Repository ${remoteUrl} is mapped to customer ${customer.name} (#${customer.id})${
+        budget ? ` and budget ${budget.title} (#${budget.id})` : ', without a budget'}.`);
+
+      return;
+    }
+
     const key = args[0]?.toUpperCase() ?? ticketFromBranch(workingDir(), findProject().config?.ticketPattern);
 
     if (!key) {
