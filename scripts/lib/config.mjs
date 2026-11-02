@@ -62,9 +62,9 @@ export function normalizeBaseUrl(url) {
 }
 
 /**
- * Whether a folder is tracked, and on which customer, is remembered per folder in the plugin's own
- * data rather than in the repository: it is a personal choice, and a folder may not be a
- * repository at all. A choice applies to every folder below it, so the closest one wins.
+ * Whether a folder is tracked, and on which customer, is remembered in the plugin's own data: per
+ * git remote for a repository, per folder otherwise. A choice applies to every folder below it, so
+ * the closest one wins.
  *
  * @typedef {{tracked: boolean, customerId?: ?number, customerName?: string, budgetId?: ?number, budgetTitle?: ?string, isInternal?: boolean, ticketPattern?: string, decidedAt?: string}} ProjectConfig
  */
@@ -103,6 +103,51 @@ function gitRoot(directory) {
   }
 }
 
+/**
+ * The url of the repository's origin, as git has it, or null without one.
+ */
+export function gitRemoteUrl(directory) {
+  try {
+    return execFileSync('git', ['remote', 'get-url', 'origin'], {
+      cwd: directory,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+      timeout: 2000,
+    }).trim() || null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * The same repository as host/path, whether it was cloned over ssh or https, so a personal choice
+ * follows it to every clone and every device.
+ */
+export function normalizeGitRemote(url) {
+  // The scp-like form git@host:owner/repo has no scheme, so URL cannot read it.
+  const scpLike = /^[\w.-]+@([^:/]+):(?!\/\/)(.+)$/.exec(url);
+  let host;
+  let path;
+
+  try {
+    ({ hostname: host, pathname: path } = scpLike ? { hostname: scpLike[1], pathname: scpLike[2] } : new URL(url));
+  } catch {
+    return null;
+  }
+
+  path = path.replace(/^\/+|\/+$/g, '').replace(/\.git$/, '');
+
+  return host && path.includes('/') ? `${host.toLowerCase()}/${path}` : null;
+}
+
+/**
+ * Personal choices for a repository are keyed by its remote; folders without one by their path.
+ */
+function personalKey(root) {
+  const remote = normalizeGitRemote(gitRemoteUrl(root) ?? '');
+
+  return remote ? `git:${remote}` : root;
+}
 
 /**
  * @returns {Record<string, ProjectConfig>}
@@ -125,18 +170,21 @@ export function workingDir(cwd) {
 export function findProject(cwd) {
   const projects = loadProjects();
   const start = workingDir(cwd);
+  const root = gitRoot(start);
+  const rootKey = root && personalKey(root);
 
   for (let directory = start; ; directory = dirname(directory)) {
     const shared = readJson(sharedConfigPath(directory));
+    // Entries saved before they were keyed by remote still count.
+    const personal = (directory === root && projects[rootKey]) || projects[directory];
 
     if (shared) {
-      const personal = projects[directory];
 
       return { directory, config: { ...pick(shared, SHARED_FIELDS), ...personal, tracked: personal?.tracked ?? true } };
     }
 
-    if (projects[directory]) {
-      return { directory, config: projects[directory] };
+    if (personal) {
+      return { directory, config: personal };
     }
 
     if (dirname(directory) === directory) {
@@ -146,9 +194,9 @@ export function findProject(cwd) {
 }
 
 /**
- * In a git repository the mapping goes to the shared file in its root, and only the personal choice
- * to track it to the plugin's own data, unless the user keeps the mapping to themselves. A personal
- * mapping beats the shared one. Without a scope, the mapping stays where it already is.
+ * The mapping is personal by default and keyed by the repository's remote. Saved for the repository,
+ * it goes to the shared file in its root, and only the personal choice to track it to the plugin's
+ * own data. A personal mapping beats the shared one. Without a scope, the mapping stays where it is.
  *
  * @param {Partial<ProjectConfig>} change
  * @param {?('repo'|'user')} scope
@@ -157,27 +205,36 @@ export function findProject(cwd) {
 export function saveProject(directory, change, scope = null, now = new Date()) {
   const root = gitRoot(directory);
   const projects = loadProjects();
+  let key = directory;
   let sharedPath = null;
   let personalChange = change;
 
   if (root) {
-    directory = root;
-    scope ??= Number.isInteger(projects[root]?.customerId) ? 'user' : 'repo';
+    key = personalKey(root);
+    // Moves an entry saved before it was keyed by remote.
+    projects[key] = { ...projects[root], ...projects[key] };
+
+    if (key !== root) {
+      delete projects[root];
+    }
+
+    const sharesMapping = readJson(sharedConfigPath(root)) !== null && !Number.isInteger(projects[key].customerId);
+    scope ??= sharesMapping ? 'repo' : 'user';
   }
 
   if (root && scope === 'repo') {
     const sharedChange = pick(change, SHARED_FIELDS);
-    personalChange = Object.fromEntries(Object.entries(change).filter(([key]) => !SHARED_FIELDS.includes(key)));
+    personalChange = Object.fromEntries(Object.entries(change).filter(([field]) => !SHARED_FIELDS.includes(field)));
 
     if (Object.keys(sharedChange).length > 0) {
       sharedPath = sharedConfigPath(root);
       writeJson(sharedPath, { ...readJson(sharedPath), ...sharedChange }, 0o644);
       // The personal mapping would otherwise keep beating the shared one.
-      projects[root] = Object.fromEntries(Object.entries(projects[root] ?? {}).filter(([key]) => !SHARED_FIELDS.includes(key)));
+      projects[key] = Object.fromEntries(Object.entries(projects[key]).filter(([field]) => !SHARED_FIELDS.includes(field)));
     }
   }
 
-  projects[directory] = { ...projects[directory], ...personalChange, decidedAt: now.toISOString() };
+  projects[key] = { ...projects[key], ...personalChange, decidedAt: now.toISOString() };
   writeJson(projectsPath(), projects);
 
   return sharedPath;
