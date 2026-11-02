@@ -325,7 +325,7 @@ const commands = {
   async 'set-customer'(args) {
     const credentials = requireCredentials();
     const customerId = Number(args[0]);
-    const scope = argument(args, '--scope') ?? 'repo';
+    const scope = argument(args, '--scope') ?? 'user';
 
     if (!Number.isInteger(customerId) || customerId <= 0 || !['repo', 'user'].includes(scope)) {
       throw new Error('Usage: set-customer <customer id> [--scope repo|user]');

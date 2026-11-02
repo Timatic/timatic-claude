@@ -108,7 +108,7 @@ test('drops the budget when the customer changes', async () => {
 test('shares the mapping of a git repository in a file the team commits', async () => {
   execFileSync('git', ['init', '-q'], { cwd: folder });
   const timatic = await timaticWithBudgets();
-  const result = await run('set-customer', '8');
+  const result = await run('set-customer', '8', '--scope', 'repo');
   await timatic.close();
 
   assert.match(result.stdout, /commit it/);
@@ -117,16 +117,28 @@ test('shares the mapping of a git repository in a file the team commits', async 
   });
 });
 
-test('keeps the mapping of a git repository to the user when asked', async () => {
+test('keeps the mapping of a git repository to the user by default', async () => {
   execFileSync('git', ['init', '-q'], { cwd: folder });
   saveProject(folder, { customerId: 7, customerName: 'Acme' }, 'repo');
   const timatic = await timaticWithBudgets();
-  const result = await run('set-customer', '8', '--scope', 'user');
+  const result = await run('set-customer', '8');
   await timatic.close();
 
   assert.doesNotMatch(result.stdout, /commit it/);
   assert.equal(JSON.parse(readFileSync(sharedConfigPath(folder), 'utf8')).customerId, 7);
   assert.equal(findProject(folder).config.customerId, 8);
+});
+
+test('a personal mapping follows the repository to another clone', () => {
+  execFileSync('git', ['init', '-q'], { cwd: folder });
+  execFileSync('git', ['remote', 'add', 'origin', 'git@bitbucket.org:acme/shop.git'], { cwd: folder });
+  const clone = mkdtempSync(join(tmpdir(), 'timatic-clone-'));
+  execFileSync('git', ['init', '-q'], { cwd: clone });
+  execFileSync('git', ['remote', 'add', 'origin', 'https://bitbucket.org/acme/shop'], { cwd: clone });
+
+  saveProject(folder, { customerId: 8, customerName: 'Globex' });
+
+  assert.equal(findProject(clone).config.customerId, 8);
 });
 
 test('a teammate is tracked on the shared mapping until they turn it off', async () => {

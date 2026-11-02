@@ -58,10 +58,11 @@ The plugin needs `node` 18 or later on your `PATH`.
 
 ## Sharing a repository's mapping with your team
 
-In a git repository, `/timatic:track` asks where to save the customer and budget. Saved in the
-repository, they go to `.claude/timatic.json` at its root. Commit it: a teammate with the plugin is then tracked
-on the same customer and budget without being asked. Saved for yourself, they stay in the plugin's
-own data and beat the repository's file.
+In a git repository, `/timatic:track` asks where to save the customer and budget.
+Saved for yourself (the default), they stay in the plugin's own data, keyed by the git remote so
+every clone of it finds them. Saved in the repository, they go to `.claude/timatic.json`
+at its root; commit it and a teammate with the plugin is tracked on the same customer and budget.
+A personal mapping beats the repository's file.
 Whether to track stays personal, so `/timatic:track off` still opts a teammate out. Add
 `ticketPattern` to this file for a repository whose tickets use another key format.
 
@@ -139,8 +140,8 @@ customer and budget.
 In `~/.config/timatic-claude/` (or `$XDG_CONFIG_HOME/timatic-claude`, or `$TIMATIC_HOME`):
 
 - `credentials.json`: your token, readable by you only
-- `projects.json`: per folder, whether it is tracked, and outside git repositories also on which
-  customer and budget. You can also add `isInternal` and `ticketPattern` to a folder here.
+- `projects.json`: per git remote (or per folder outside git repositories), whether it is tracked
+  and, unless the repository's `.claude/timatic.json` covers it, on which customer and budget. You can also add `isInternal` and `ticketPattern` to a folder here.
 - `sessions/`: per session, its title, ticket, the prompts of the last 15 minutes and their
   summary. Pruned after 14 days.
 - `queue.json`: events waiting for Timatic to be reachable
