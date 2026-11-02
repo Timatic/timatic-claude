@@ -132,7 +132,7 @@ export function findProject(cwd) {
     if (shared) {
       const personal = projects[directory];
 
-      return { directory, config: { ...personal, ...pick(shared, SHARED_FIELDS), tracked: personal?.tracked ?? true } };
+      return { directory, config: { ...pick(shared, SHARED_FIELDS), ...personal, tracked: personal?.tracked ?? true } };
     }
 
     if (projects[directory]) {
@@ -147,28 +147,36 @@ export function findProject(cwd) {
 
 /**
  * In a git repository the mapping goes to the shared file in its root, and only the personal choice
- * to track it to the plugin's own data.
+ * to track it to the plugin's own data, unless the user keeps the mapping to themselves. A personal
+ * mapping beats the shared one. Without a scope, the mapping stays where it already is.
  *
  * @param {Partial<ProjectConfig>} change
+ * @param {?('repo'|'user')} scope
  * @returns {?string} the shared file when it was written, so the user can be told to commit it.
  */
-export function saveProject(directory, change, now = new Date()) {
+export function saveProject(directory, change, scope = null, now = new Date()) {
   const root = gitRoot(directory);
-  const sharedChange = pick(change, SHARED_FIELDS);
+  const projects = loadProjects();
   let sharedPath = null;
   let personalChange = change;
 
   if (root) {
     directory = root;
+    scope ??= Number.isInteger(projects[root]?.customerId) ? 'user' : 'repo';
+  }
+
+  if (root && scope === 'repo') {
+    const sharedChange = pick(change, SHARED_FIELDS);
     personalChange = Object.fromEntries(Object.entries(change).filter(([key]) => !SHARED_FIELDS.includes(key)));
 
     if (Object.keys(sharedChange).length > 0) {
       sharedPath = sharedConfigPath(root);
       writeJson(sharedPath, { ...readJson(sharedPath), ...sharedChange }, 0o644);
+      // The personal mapping would otherwise keep beating the shared one.
+      projects[root] = Object.fromEntries(Object.entries(projects[root] ?? {}).filter(([key]) => !SHARED_FIELDS.includes(key)));
     }
   }
 
-  const projects = loadProjects();
   projects[directory] = { ...projects[directory], ...personalChange, decidedAt: now.toISOString() };
   writeJson(projectsPath(), projects);
 

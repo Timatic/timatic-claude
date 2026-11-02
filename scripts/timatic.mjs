@@ -159,13 +159,7 @@ export function sessionStartNotice(input, command = 'node "${CLAUDE_PLUGIN_ROOT}
       'Before anything else in your first reply, ask them with the AskUserQuestion tool:',
       '"Should Timatic track your time in this folder?" with the options "Yes" and "No".',
       `On "No", run \`${command} track off\` and carry on with their request.`,
-      `On "Yes", first run \`${command} suggest\`: when the ticket in the git branch is mapped in Timatic, it names that customer and budget.`,
-      `Then run \`${command} customers\` (lines of id<TAB>name) and ask which customer this folder is for.`,
-      'Offer the suggested customer (with its budget) first, marked as recommended.',
-      `On a customer, run \`${command} set-customer <id>\`; for the suggested one with a budget, also \`${command} set-budget <id>\` and carry on.`,
-      `Then run \`${command} budgets\` and, if it lists any, ask whether all work in this folder is for one specific budget;`,
-      'this is optional, so always offer "No specific budget" as an option.',
-      `On a budget, run \`${command} set-budget <id>\`. Then carry on with their request.`,
+      'On "Yes", follow the timatic:track skill (invoke it with the Skill tool) to choose the customer, budget and where to save them, then carry on with their request.',
     );
   } else if (!Number.isInteger(config.customerId)) {
     notices.push(`No Timatic customer is set for ${directory}, so time arrives without one. Suggest running /timatic:track.`);
@@ -331,9 +325,10 @@ const commands = {
   async 'set-customer'(args) {
     const credentials = requireCredentials();
     const customerId = Number(args[0]);
+    const scope = argument(args, '--scope') ?? 'repo';
 
-    if (!Number.isInteger(customerId) || customerId <= 0) {
-      throw new Error('Usage: set-customer <customer id>');
+    if (!Number.isInteger(customerId) || customerId <= 0 || !['repo', 'user'].includes(scope)) {
+      throw new Error('Usage: set-customer <customer id> [--scope repo|user]');
     }
 
     const customer = await fetchCustomer(credentials.baseUrl, credentials.token, customerId);
@@ -345,7 +340,7 @@ const commands = {
       ? { budgetId: previous.budgetId ?? null, budgetTitle: previous.budgetTitle ?? null }
       : { budgetId: null, budgetTitle: null };
 
-    const sharedPath = saveProject(directory, { tracked: true, customerId: customer.id, customerName: customer.name, ...budget });
+    const sharedPath = saveProject(directory, { tracked: true, customerId: customer.id, customerName: customer.name, ...budget }, scope);
     console.log(`Timatic now tracks ${directory} on ${customer.name} (#${customer.id}).`);
     announceShared(sharedPath);
   },
