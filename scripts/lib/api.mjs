@@ -124,6 +124,29 @@ export async function fetchTicket(baseUrl, token, key) {
   }
 }
 
+/**
+ * The customer and budget Timatic maps a git repository to, or null when no integration knows it.
+ * Older Timatic versions have no such endpoint and answer 404, which means the same.
+ *
+ * @returns {Promise<?{customerId: number, budgetId: ?number}>}
+ */
+export async function fetchRepositoryMapping(baseUrl, token, remoteUrl) {
+  try {
+    const json = await request(baseUrl, `/git-repository-mappings?filter[remote]=${encodeURIComponent(remoteUrl)}`, { token });
+    const attributes = json?.data?.[0]?.attributes;
+
+    return Number.isInteger(attributes?.customerId)
+      ? { customerId: attributes.customerId, budgetId: attributes.budgetId ?? null }
+      : null;
+  } catch (error) {
+    if (error.status === 404) {
+      return null;
+    }
+
+    throw error;
+  }
+}
+
 export async function fetchBudget(baseUrl, token, budgetId) {
   const json = await request(baseUrl, `/budgets/${encodeURIComponent(budgetId)}`, { token });
 

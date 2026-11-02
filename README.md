@@ -58,7 +58,11 @@ The plugin needs `node` 18 or later on your `PATH`.
 
 ## Sharing a repository's mapping with your team
 
-In a git repository, `/timatic:track` asks where to save the customer and budget.
+Map the repository in Timatic's Bitbucket or GitHub integration. The first time someone starts
+Claude Code in a clone of it, the plugin finds that mapping by the git remote and saves it for them,
+without asking anything.
+
+For a repository Timatic does not know, `/timatic:track` asks where to save the customer and budget.
 Saved for yourself (the default), they stay in the plugin's own data, keyed by the git remote so
 every clone of it finds them. Saved in the repository, they go to `.claude/timatic.json`
 at its root; commit it and a teammate with the plugin is tracked on the same customer and budget.
