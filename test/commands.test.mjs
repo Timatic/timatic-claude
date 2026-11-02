@@ -117,9 +117,21 @@ test('shares the mapping of a git repository in a file the team commits', async 
   });
 });
 
+test('keeps the mapping of a git repository to the user when asked', async () => {
+  execFileSync('git', ['init', '-q'], { cwd: folder });
+  saveProject(folder, { customerId: 7, customerName: 'Acme' }, 'repo');
+  const timatic = await timaticWithBudgets();
+  const result = await run('set-customer', '8', '--scope', 'user');
+  await timatic.close();
+
+  assert.doesNotMatch(result.stdout, /commit it/);
+  assert.equal(JSON.parse(readFileSync(sharedConfigPath(folder), 'utf8')).customerId, 7);
+  assert.equal(findProject(folder).config.customerId, 8);
+});
+
 test('a teammate is tracked on the shared mapping until they turn it off', async () => {
   execFileSync('git', ['init', '-q'], { cwd: folder });
-  saveProject(folder, { customerId: 8, customerName: 'Globex' });
+  saveProject(folder, { customerId: 8, customerName: 'Globex' }, 'repo');
   useTemporaryHome();
 
   assert.equal(findProject(folder).config.tracked, true);
