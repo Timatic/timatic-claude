@@ -58,16 +58,16 @@ The plugin needs `node` 18 or later on your `PATH`.
 ## Business work without a mapping
 
 To make sure business work is never silently lost, an organisation lists the git remotes that
-hold it in Claude Code's settings, for everyone at once through
-[managed settings](https://code.claude.com/docs/en/managed-settings.md):
+hold it in the plugin's `settings.json` (see "Where things are stored"), for example rolled out to
+everyone through MDM:
 
 ```json
 {
-  "env": { "TIMATIC_TRACKED_GIT_REMOTE_PREFIXES": "github.com/acme,bitbucket.org/acme" }
+  "trackedGitRemotePrefixes": ["github.com/acme", "bitbucket.org/acme"]
 }
 ```
 
-Prefixes are comma separated, in `host/owner` form, whether you clone over ssh or https. When
+Prefixes are in `host/owner` form, whether you clone over ssh or https. When
 Claude Code starts in a repository under one of them that Timatic has no mapping for, Claude says so
 and asks for the customer and budget.
 
@@ -159,6 +159,7 @@ customer and budget.
 In `~/.config/timatic-claude/` (or `$XDG_CONFIG_HOME/timatic-claude`, or `$TIMATIC_HOME`):
 
 - `credentials.json`: your token, readable by you only
+- `settings.json`: the `trackedGitRemotePrefixes` of business work, see above
 - `projects.json`: per git remote (or per folder outside git repositories), whether it is tracked
   and, unless the repository's `.claude/timatic.json` covers it, on which customer and budget. You can also add `isInternal` and `ticketPattern` to a folder here.
 - `sessions/`: per session, its title, ticket, the prompts of the last 15 minutes and their

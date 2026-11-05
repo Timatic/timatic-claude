@@ -1,11 +1,11 @@
 import assert from 'node:assert/strict';
 import { execFileSync, spawn, spawnSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { beforeEach, test } from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { findProject, loadCredentials, saveCredentials, saveProject } from '../scripts/lib/config.mjs';
+import { findProject, loadCredentials, saveCredentials, saveProject, settingsPath } from '../scripts/lib/config.mjs';
 import { queuedCount, sendEvents } from '../scripts/lib/events.mjs';
 import { handleHook, sessionStartNotice } from '../scripts/timatic.mjs';
 import { fakeTimatic, useTemporaryHome } from '../test-support/helpers.mjs';
@@ -117,11 +117,10 @@ test('the session start stays silent in a folder Timatic has no mapping for', as
   const repository = mkdtempSync(join(tmpdir(), 'timatic-repo-'));
   execFileSync('git', ['init', '-q'], { cwd: repository });
   execFileSync('git', ['remote', 'add', 'origin', 'git@github.com:someone/hobby.git'], { cwd: repository });
-  process.env.TIMATIC_TRACKED_GIT_REMOTE_PREFIXES = 'bitbucket.org/acme';
+  writeFileSync(settingsPath(), JSON.stringify({ trackedGitRemotePrefixes: ['bitbucket.org/acme'] }));
 
   const notice = await sessionStartNotice({ cwd: repository });
   await timatic.close();
-  delete process.env.TIMATIC_TRACKED_GIT_REMOTE_PREFIXES;
 
   assert.equal(notice, '');
   assert.equal(findProject(repository).config, null);
@@ -132,11 +131,12 @@ test('the session start has Claude ask for a customer for business work Timatic 
   const repository = mkdtempSync(join(tmpdir(), 'timatic-repo-'));
   execFileSync('git', ['init', '-q'], { cwd: repository });
   execFileSync('git', ['remote', 'add', 'origin', 'https://bitbucket.org/Acme/shop.git'], { cwd: repository });
+  writeFileSync(settingsPath(), JSON.stringify({ trackedGitRemotePrefixes: ['github.com/acme', 'bitbucket.org/acme/'] }));
 
   const result = spawnSync('node', [script, 'hook', 'session-start'], {
     input: JSON.stringify({ session_id: 's6', cwd: repository }),
     encoding: 'utf8',
-    env: { ...process.env, CLAUDE_PLUGIN_ROOT: '/plugin', TIMATIC_TRACKED_GIT_REMOTE_PREFIXES: 'github.com/acme, bitbucket.org/acme/' },
+    env: { ...process.env, CLAUDE_PLUGIN_ROOT: '/plugin' },
   });
 
   assert.match(result.stdout, /timatic:track skill/);
