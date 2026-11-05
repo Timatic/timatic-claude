@@ -68,6 +68,10 @@ export function normalizeBaseUrl(url) {
  *
  * @typedef {{tracked: boolean, customerId?: ?number, customerName?: string, budgetId?: ?number, budgetTitle?: ?string, isInternal?: boolean, ticketPattern?: string, decidedAt?: string}} ProjectConfig
  */
+export function settingsPath() {
+  return join(dataDir(), 'settings.json');
+}
+
 function projectsPath() {
   return join(dataDir(), 'projects.json');
 }
@@ -142,15 +146,15 @@ export function normalizeGitRemote(url) {
 
 /**
  * Remotes under one of these prefixes hold work that must be tracked, so the user is asked for a
- * customer when Timatic has no mapping. Set by the organisation in Claude Code's (managed) settings
- * `env`, comma separated, in the host/path form of normalizeGitRemote.
+ * customer when Timatic has no mapping. The organisation rolls them out in settings.json (via MDM),
+ * in the host/path form of normalizeGitRemote.
  */
 export function isDesiredTrackedRemote(remoteUrl) {
   const remote = normalizeGitRemote(remoteUrl ?? '')?.toLowerCase();
+  const prefixes = readJson(settingsPath())?.trackedGitRemotePrefixes;
 
-  return Boolean(remote) && (process.env.TIMATIC_TRACKED_GIT_REMOTE_PREFIXES ?? '')
-    .split(',')
-    .map((prefix) => prefix.trim().toLowerCase().replace(/\/+$/, ''))
+  return Boolean(remote) && Array.isArray(prefixes) && prefixes
+    .map((prefix) => String(prefix).trim().toLowerCase().replace(/\/+$/, ''))
     .some((prefix) => prefix !== '' && (remote === prefix || remote.startsWith(`${prefix}/`)));
 }
 
