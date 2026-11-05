@@ -141,6 +141,20 @@ export function normalizeGitRemote(url) {
 }
 
 /**
+ * Remotes under one of these prefixes hold work that must be tracked, so the user is asked for a
+ * customer when Timatic has no mapping. Set by the organisation in Claude Code's (managed) settings
+ * `env`, comma separated, in the host/path form of normalizeGitRemote.
+ */
+export function isDesiredTrackedRemote(remoteUrl) {
+  const remote = normalizeGitRemote(remoteUrl ?? '')?.toLowerCase();
+
+  return Boolean(remote) && (process.env.TIMATIC_TRACKED_GIT_REMOTE_PREFIXES ?? '')
+    .split(',')
+    .map((prefix) => prefix.trim().toLowerCase().replace(/\/+$/, ''))
+    .some((prefix) => prefix !== '' && (remote === prefix || remote.startsWith(`${prefix}/`)));
+}
+
+/**
  * Personal choices for a repository are keyed by its remote; folders without one by their path.
  */
 function personalKey(root) {
