@@ -112,7 +112,7 @@ export async function fetchTicket(baseUrl, token, key) {
     return {
       key: attributes.key ?? key,
       title: attributes.title ?? '',
-      customerId: attributes.customerId ?? null,
+      customerId: toNullableNumber(attributes.customerId),
       budgetId: attributes.budgetId ?? null,
     };
   } catch (error) {
@@ -134,9 +134,10 @@ export async function fetchRepositoryMapping(baseUrl, token, remoteUrl) {
   try {
     const json = await request(baseUrl, `/git-repository-mappings?filter[remote]=${encodeURIComponent(remoteUrl)}`, { token });
     const attributes = json?.data?.[0]?.attributes;
+    const customerId = toNullableNumber(attributes?.customerId);
 
-    return Number.isInteger(attributes?.customerId)
-      ? { customerId: attributes.customerId, budgetId: attributes.budgetId ?? null }
+    return Number.isInteger(customerId)
+      ? { customerId, budgetId: attributes.budgetId ?? null }
       : null;
   } catch (error) {
     if (error.status === 404) {
@@ -157,4 +158,9 @@ export async function fetchCustomer(baseUrl, token, customerId) {
   const json = await request(baseUrl, `/customers/${encodeURIComponent(customerId)}`, { token });
 
   return { id: Number(json.data.id), name: json.data.attributes?.name ?? '' };
+}
+
+/** Timatic returns ids as strings; the plugin keeps them as numbers. */
+function toNullableNumber(value) {
+  return value === null || value === undefined ? null : Number(value);
 }

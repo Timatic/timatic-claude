@@ -32,7 +32,7 @@ export function buildEvent({ eventTypeId, userId, startedAt, endedAt, project, t
   const attributes = {
     sourceId: SOURCE_ID,
     eventTypeId,
-    userId,
+    userId: String(userId),
     endedAt: endedAt.toISOString(),
   };
 
@@ -41,7 +41,7 @@ export function buildEvent({ eventTypeId, userId, startedAt, endedAt, project, t
   }
 
   if (Number.isInteger(project.customerId)) {
-    attributes.customerId = project.customerId;
+    attributes.customerId = String(project.customerId);
   }
 
   if (Number.isInteger(project.budgetId)) {
@@ -125,7 +125,7 @@ export async function sendEvents(credentials, events, now = Date.now()) {
  */
 export function keepQueuedEventsOf(userId) {
   const queued = readJson(queuePath(), []) ?? [];
-  const kept = queued.filter((item) => item.body?.data?.attributes?.userId === userId);
+  const kept = queued.filter((item) => String(item.body?.data?.attributes?.userId) === String(userId));
 
   if (kept.length !== queued.length) {
     writeJson(queuePath(), kept);
