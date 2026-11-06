@@ -67,7 +67,7 @@ everyone through MDM:
 }
 ```
 
-Prefixes are in `host/owner` form, whether you clone over ssh or https. When
+Or let Claude add one with `/timatic:tracked-prefixes add github.com/acme`. Prefixes are in `host/owner` form, whether you clone over ssh or https. When
 Claude Code starts in a repository under one of them that Timatic has no mapping for, Claude says so
 and asks for the customer and budget.
 
@@ -100,6 +100,7 @@ Whether to track stays personal, so `/timatic:track off` still opts a teammate o
 |---|---|
 | `/timatic:login [--url <url>]` | Set up: ask for the url and log in, or log in again after the token expired |
 | `/timatic:logout` | Revoke this installation's token |
+| `/timatic:tracked-prefixes [list\|add\|remove <prefix>]` | Manage the git remote prefixes of business work |
 | `/timatic:track [off\|customer]` | Track the current folder and choose its customer and optional budget, or stop tracking it |
 
 ## What is sent
