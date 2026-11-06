@@ -4,7 +4,8 @@ import {
   fetchBudget, fetchBudgets, fetchCustomer, fetchCustomers, fetchRepositoryMapping, fetchTicket,
 } from './lib/api.mjs';
 import {
-  findProject, forgetCredentials, gitRemoteUrl, isDesiredTrackedRemote, loadCredentials, resolveBaseUrl, saveCredentials, saveProject, workingDir,
+  findProject, forgetCredentials, gitRemoteUrl, isDesiredTrackedRemote, loadCredentials, normalizeRemotePrefix, resolveBaseUrl, saveCredentials, saveProject,
+  saveTrackedRemotePrefixes, settingsPath, trackedRemotePrefixes, workingDir,
 } from './lib/config.mjs';
 import { buildEvent, EVENT_TYPES, keepQueuedEventsOf, sendEvents } from './lib/events.mjs';
 import { login, logout } from './lib/oauth.mjs';
@@ -477,6 +478,30 @@ const commands = {
     const sharedPath = saveProject(directory, { ...config, budgetId: budget.id, budgetTitle: budget.title });
     console.log(`Work in ${directory} is now booked on budget ${budget.title} (#${budget.id}).`);
     announceShared(sharedPath);
+  },
+
+  /**
+   * The git remote prefixes of business work, which Claude asks a customer for when Timatic maps none.
+   */
+  async 'tracked-prefixes'([action, prefixArgument]) {
+    const prefixes = trackedRemotePrefixes();
+    const prefix = prefixArgument ? normalizeRemotePrefix(prefixArgument) : '';
+
+    if (action === undefined || action === 'list') {
+      console.log(prefixes.length ? prefixes.join('\n') : 'No tracked git remote prefixes.');
+
+      return;
+    }
+
+    if (!['add', 'remove'].includes(action) || prefix === '') {
+      throw new Error('Usage: tracked-prefixes [list|add <prefix>|remove <prefix>]');
+    }
+
+    const others = prefixes.filter((existing) => normalizeRemotePrefix(existing) !== prefix);
+    saveTrackedRemotePrefixes(action === 'add' ? [...others, prefix] : others);
+    console.log(action === 'add'
+      ? `Business work under ${prefix} is now asked a customer for when Timatic maps none (${settingsPath()}).`
+      : `${prefix} is no longer a tracked git remote prefix (${settingsPath()}).`);
   },
 
   async track(args) {
