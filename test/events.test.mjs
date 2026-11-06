@@ -22,7 +22,7 @@ test('leaves out a start that would make the event invalid', () => {
 test('only sends what the project config sets', () => {
   const { attributes } = event({ project: { customerId: 4, budgetId: 9, isInternal: false } }).data;
 
-  assert.equal(attributes.customerId, 4);
+  assert.equal(attributes.customerId, '4');
   assert.equal(attributes.budgetId, 9);
   assert.equal(attributes.isInternal, false);
   assert.equal('ticketNumber' in attributes, false);

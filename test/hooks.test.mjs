@@ -101,8 +101,8 @@ test('the hook posts the event to Timatic and stays silent', async () => {
     {
       sourceId: 'claude_code',
       eventTypeId: 'claude_prompt_submitted',
-      userId: 3,
-      customerId: 7,
+      userId: '3',
+      customerId: '7',
       ticketNumber: 'ABC-1',
       title: `${project.split('/').at(-1)}: Bugfix`,
       description: 'Bugfix',
@@ -199,7 +199,7 @@ test('keeps events while Timatic refuses the token and sends them once the user 
 test('the session start silently saves the mapping Timatic has for the repository', async () => {
   const timatic = await fakeTimatic((request) => {
     if (request.url.startsWith('/git-repository-mappings?')) {
-      return { json: { data: [{ type: 'git-repository-mappings', id: 'bitbucket.org/acme/shop', attributes: { customerId: 8, budgetId: null } }] } };
+      return { json: { data: [{ type: 'git-repository-mappings', id: 'bitbucket.org/acme/shop', attributes: { customerId: '8', budgetId: null } }] } };
     }
 
     return { json: { data: { type: 'customers', id: '8', attributes: { name: 'Globex' } } } };

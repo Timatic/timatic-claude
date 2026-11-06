@@ -166,7 +166,7 @@ test('suggests the customer and budget the branch ticket is mapped to', async ()
 
   const timatic = await fakeTimatic((request) => {
     if (request.url === '/tickets/ACME-12') {
-      return { json: { data: { type: 'tickets', id: 'ACME-12', attributes: { key: 'ACME-12', title: 'Login', customerId: 8, budgetId: 9 } } } };
+      return { json: { data: { type: 'tickets', id: 'ACME-12', attributes: { key: 'ACME-12', title: 'Login', customerId: '8', budgetId: 9 } } } };
     }
 
     if (request.url === '/customers/8') {
