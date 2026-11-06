@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { beforeEach, test } from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { findProject, saveCredentials, saveProject, sharedConfigPath } from '../scripts/lib/config.mjs';
+import { findProject, saveCredentials, saveProject, settingsPath, sharedConfigPath } from '../scripts/lib/config.mjs';
 import { fakeTimatic, useTemporaryHome } from '../test-support/helpers.mjs';
 
 const script = fileURLToPath(new URL('../scripts/timatic.mjs', import.meta.url));
@@ -195,4 +195,14 @@ test('says so when the ticket is unknown', async () => {
   await timatic.close();
 
   assert.equal(result.stdout, 'Timatic does not know ticket NOPE-1.\n');
+});
+
+test('adds and removes tracked git remote prefixes in settings.json, in host/path form', async () => {
+  await run('tracked-prefixes', 'add', 'git@github.com:Acme');
+  await run('tracked-prefixes', 'add', 'https://bitbucket.org/acme/');
+  await run('tracked-prefixes', 'remove', 'github.com/acme');
+  const { stdout } = await run('tracked-prefixes', 'list');
+
+  assert.deepEqual(JSON.parse(readFileSync(settingsPath(), 'utf8')).trackedGitRemotePrefixes, ['bitbucket.org/acme']);
+  assert.equal(stdout, 'bitbucket.org/acme\n');
 });
