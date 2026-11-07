@@ -4,7 +4,8 @@ import {
   fetchBudget, fetchBudgets, fetchCustomer, fetchCustomers, fetchRepositoryMapping, fetchTicket,
 } from './lib/api.mjs';
 import {
-  findProject, forgetCredentials, gitRemoteUrl, loadCredentials, resolveBaseUrl, saveCredentials, saveProject, workingDir,
+  findProject, forgetCredentials, gitRemoteUrl, isDesiredTrackedRemote, loadCredentials, normalizeRemotePrefix, resolveBaseUrl, saveCredentials, saveProject,
+  saveTrackedRemotePrefixes, settingsPath, trackedRemotePrefixes, workingDir,
 } from './lib/config.mjs';
 import { buildEvent, EVENT_TYPES, keepQueuedEventsOf, sendEvents } from './lib/events.mjs';
 import { login, logout } from './lib/oauth.mjs';
@@ -153,25 +154,18 @@ export async function sessionStartNotice(input, command = 'node "${CLAUDE_PLUGIN
     return 'Timatic plugin: Timatic no longer accepts the login (it expired or was revoked). Events are kept and sent once the user runs /timatic:login; suggest doing so.';
   }
 
-  if (config === null && await adoptRepositoryMapping(credentials, workingDir(input.cwd))) {
+  // Tracking follows Timatic's repository mappings without a word; only business work without one is asked about.
+  if (config !== null || await adoptRepositoryMapping(credentials, directory)
+    || !isDesiredTrackedRemote(gitRemoteUrl(directory))) {
     return '';
   }
 
-  const notices = [];
-
-  if (config === null) {
-    notices.push(
-      `The user has not yet decided whether Timatic should track time spent in ${workingDir(input.cwd)}.`,
-      'Before anything else in your first reply, ask them with the AskUserQuestion tool:',
-      '"Should Timatic track your time in this folder?" with the options "Yes" and "No".',
-      `On "No", run \`${command} track off\` and carry on with their request.`,
-      'On "Yes", follow the timatic:track skill (invoke it with the Skill tool) to choose the customer, budget and where to save them, then carry on with their request.',
-    );
-  } else if (!Number.isInteger(config.customerId)) {
-    notices.push(`No Timatic customer is set for ${directory}, so time arrives without one. Suggest running /timatic:track.`);
-  }
-
-  return notices.length ? `Timatic plugin: ${notices.join(' ')}` : '';
+  return [
+    `Timatic plugin: ${directory} holds business work, but Timatic has no customer mapped for its git remote.`,
+    'Before anything else in your first reply, tell the user so and follow the timatic:track skill (invoke it with the Skill tool)',
+    'to choose the customer, budget and where to save them, then carry on with their request.',
+    `If the user says this work should not be tracked, run \`${command} track off\` instead.`,
+  ].join(' ');
 }
 
 /**
@@ -484,6 +478,30 @@ const commands = {
     const sharedPath = saveProject(directory, { ...config, budgetId: budget.id, budgetTitle: budget.title });
     console.log(`Work in ${directory} is now booked on budget ${budget.title} (#${budget.id}).`);
     announceShared(sharedPath);
+  },
+
+  /**
+   * The git remote prefixes of business work, which Claude asks a customer for when Timatic maps none.
+   */
+  async 'tracked-prefixes'([action, prefixArgument]) {
+    const prefixes = trackedRemotePrefixes();
+    const prefix = prefixArgument ? normalizeRemotePrefix(prefixArgument) : '';
+
+    if (action === undefined || action === 'list') {
+      console.log(prefixes.length ? prefixes.join('\n') : 'No tracked git remote prefixes.');
+
+      return;
+    }
+
+    if (!['add', 'remove'].includes(action) || prefix === '') {
+      throw new Error('Usage: tracked-prefixes [list|add <prefix>|remove <prefix>]');
+    }
+
+    const others = prefixes.filter((existing) => normalizeRemotePrefix(existing) !== prefix);
+    saveTrackedRemotePrefixes(action === 'add' ? [...others, prefix] : others);
+    console.log(action === 'add'
+      ? `Business work under ${prefix} is now asked a customer for when Timatic maps none (${settingsPath()}).`
+      : `${prefix} is no longer a tracked git remote prefix (${settingsPath()}).`);
   },
 
   async track(args) {

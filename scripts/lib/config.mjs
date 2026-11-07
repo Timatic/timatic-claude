@@ -68,6 +68,10 @@ export function normalizeBaseUrl(url) {
  *
  * @typedef {{tracked: boolean, customerId?: ?number, customerName?: string, budgetId?: ?number, budgetTitle?: ?string, isInternal?: boolean, ticketPattern?: string, decidedAt?: string}} ProjectConfig
  */
+export function settingsPath() {
+  return join(dataDir(), 'settings.json');
+}
+
 function projectsPath() {
   return join(dataDir(), 'projects.json');
 }
@@ -138,6 +142,40 @@ export function normalizeGitRemote(url) {
   path = path.replace(/^\/+|\/+$/g, '').replace(/\.git$/, '');
 
   return host && path.includes('/') ? `${host.toLowerCase()}/${path}` : null;
+}
+
+/**
+ * Remotes under one of these prefixes hold work that must be tracked, so the user is asked for a
+ * customer when Timatic has no mapping. The organisation rolls them out in settings.json (via MDM),
+ * in the host/path form of normalizeGitRemote.
+ */
+export function isDesiredTrackedRemote(remoteUrl) {
+  const remote = normalizeGitRemote(remoteUrl ?? '')?.toLowerCase();
+  return Boolean(remote) && trackedRemotePrefixes()
+    .map(normalizeRemotePrefix)
+    .some((prefix) => prefix !== '' && (remote === prefix || remote.startsWith(`${prefix}/`)));
+}
+
+/**
+ * A prefix as host/path, whether it was written as such, as an https url or in ssh form.
+ */
+export function normalizeRemotePrefix(prefix) {
+  return String(prefix).trim().toLowerCase()
+    .replace(/^[a-z+]+:\/\//, '')
+    .replace(/^[^@/]+@/, '')
+    .replace(/^([^/:]+):(\d+\/)?/, '$1/')
+    .replace(/\.git$/, '')
+    .replace(/\/+$/, '');
+}
+
+export function trackedRemotePrefixes() {
+  const prefixes = readJson(settingsPath())?.trackedGitRemotePrefixes;
+
+  return Array.isArray(prefixes) ? prefixes : [];
+}
+
+export function saveTrackedRemotePrefixes(prefixes) {
+  writeJson(settingsPath(), { ...readJson(settingsPath()), trackedGitRemotePrefixes: prefixes }, 0o644);
 }
 
 /**

@@ -51,10 +51,25 @@ The plugin needs `node` 18 or later on your `PATH`.
    "Claude Code plugin". The plugin gets a token of its own. It expires only after 90 days without
    use: every use pushes the expiry forward, so while you keep using Claude Code you never have to
    log in again.
-2. Right after login, and in every folder you have not decided on yet at the start of a session, Claude asks whether
-   Timatic should track your time there. If so, it asks for which customer and, optionally, whether
-   all work there is for one budget of that customer. Your answers are remembered for that folder
-   and every folder below it.
+2. That's it. Tracking runs silently: a repository Timatic maps in its Bitbucket or GitHub
+   integration is tracked on that customer, everything else is not tracked. Use `/timatic:track`
+   to track a folder yourself, or to stop tracking one.
+
+## Business work without a mapping
+
+To make sure business work is never silently lost, an organisation lists the git remotes that
+hold it in the plugin's `settings.json` (see "Where things are stored"), for example rolled out to
+everyone through MDM:
+
+```json
+{
+  "trackedGitRemotePrefixes": ["github.com/acme", "bitbucket.org/acme"]
+}
+```
+
+Or let Claude add one with `/timatic:tracked-prefixes add github.com/acme`. Prefixes are in `host/owner` form, whether you clone over ssh or https. When
+Claude Code starts in a repository under one of them that Timatic has no mapping for, Claude says so
+and asks for the customer and budget.
 
 ## Sharing a repository's mapping with your team
 
@@ -85,6 +100,7 @@ Whether to track stays personal, so `/timatic:track off` still opts a teammate o
 |---|---|
 | `/timatic:login [--url <url>]` | Set up: ask for the url and log in, or log in again after the token expired |
 | `/timatic:logout` | Revoke this installation's token |
+| `/timatic:tracked-prefixes [list\|add\|remove <prefix>]` | Manage the git remote prefixes of business work |
 | `/timatic:track [off\|customer]` | Track the current folder and choose its customer and optional budget, or stop tracking it |
 
 ## What is sent
@@ -111,8 +127,8 @@ for a ticket key. When the session has no name, the plugin asks Claude Code itse
 in at most ten words, and sends only that summary. This runs in the background and only for folders
 you track. Set `TIMATIC_CLAUDE_BIN` if `claude` is not on the `PATH` of your hooks.
 
-Nothing is sent from a folder you declined. Before you decide on a folder, events are held for the
-current session and sent once you say yes. When Timatic cannot be reached, or no longer accepts your
+Nothing is sent from a folder that is not tracked. Before a folder is set up, events of the current
+session are held and sent once you choose a customer for it. When Timatic cannot be reached, or no longer accepts your
 login, events are queued (up to 500, for at most 30 days) and sent with the next event or right after
 `/timatic:login`. Events queued under another Timatic user are dropped when you log in.
 
@@ -144,6 +160,7 @@ customer and budget.
 In `~/.config/timatic-claude/` (or `$XDG_CONFIG_HOME/timatic-claude`, or `$TIMATIC_HOME`):
 
 - `credentials.json`: your token, readable by you only
+- `settings.json`: the `trackedGitRemotePrefixes` of business work, see above
 - `projects.json`: per git remote (or per folder outside git repositories), whether it is tracked
   and, unless the repository's `.claude/timatic.json` covers it, on which customer and budget. You can also add `isInternal` and `ticketPattern` to a folder here.
 - `sessions/`: per session, its title, ticket, the prompts of the last 15 minutes and their
